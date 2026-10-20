@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vanguard WMS Pro - Zamonaviy Omborxona Boshqaruvi</title>
+  <title>Vanguard WMS Pro - Enterprise Omborxona Boshqaruvi</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -17,8 +17,8 @@
               500: '#cb11ab',
               600: '#a30c88',
               700: '#6c117e',
-              800: '#480b55',
-              900: '#2b0633',
+              850: '#380943',
+              900: '#23042a',
             }
           }
         }
@@ -27,6 +27,8 @@
   </script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- JsBarcode -->
@@ -38,7 +40,8 @@
       body * {
         visibility: hidden !important;
       }
-      #printContainer, #printContainer * {
+      #printContainer, #printContainer *,
+      #nakladnayaDoc, #nakladnayaDoc * {
         visibility: visible !important;
       }
       #printContainer {
@@ -49,6 +52,18 @@
         background: white !important;
         color: black !important;
       }
+      #nakladnayaDoc {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 10mm 15mm !important;
+        background: white !important;
+        color: black !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
     }
     .custom-scrollbar::-webkit-scrollbar {
       width: 5px;
@@ -58,17 +73,40 @@
       background: rgba(0,0,0,0.05);
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: rgba(203, 17, 171, 0.25);
+      background: rgba(203, 17, 171, 0.3);
       border-radius: 4px;
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.65rem center;
+      background-repeat: no-repeat;
+      background-size: 1.2em 1.2em;
+      padding-right: 2.2rem !important;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+    html, body {
+      overflow-x: hidden !important;
+      max-width: 100vw;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .safe-bottom {
+      padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200 antialiased selection:bg-wb-500 selection:text-white overflow-x-hidden">
 
-  <!-- ======================== LOGIN EKRANI (Haqiqiy xavfsiz login) ======================== -->
+  <!-- ======================== LOGIN EKRANI ======================== -->
   <div id="loginScreen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-      <!-- WB uslubidagi nafis fon nuri -->
       <div class="absolute -top-24 -right-24 w-60 h-60 bg-gradient-to-br from-wb-500/25 to-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
 
       <div class="text-center mb-8 relative">
@@ -76,9 +114,9 @@
           <i data-lucide="boxes" class="w-8 h-8"></i>
         </div>
         <h2 class="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
-          VANGUARD <span class="text-xs px-2 py-0.5 rounded-full bg-wb-500/20 text-wb-400 border border-wb-500/40 font-mono">WMS PRO</span>
+          VANGUARD <span class="text-xs px-2.5 py-0.5 rounded-full bg-wb-500/20 text-wb-400 border border-wb-500/40 font-mono font-bold">WMS PRO</span>
         </h2>
-        <p class="text-xs text-slate-400 mt-1.5">Avtomatlashtirilgan Ombor Boshqaruv Tizimi</p>
+        <p class="text-xs text-slate-400 mt-1.5">Enterprise Ombor Boshqaruvi va Logistika Tizimi</p>
       </div>
 
       <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
@@ -106,7 +144,7 @@
         </button>
 
         <p class="text-[11px] text-slate-500 text-center pt-2">
-          Tizim kiritilgan login/parolga qarab avtomatik rolni aniqlaydi.
+          Dastlabki hisoblar: superadmin / 123456 • admin / 123456 • omborchi / 123456
         </p>
       </form>
     </div>
@@ -115,224 +153,375 @@
   <!-- ======================== ASOSIY ILOVA ======================== -->
   <div id="appContainer" class="hidden flex-1 flex flex-col">
 
-    <!-- WB Uslubidagi Elegant Navbar -->
-    <header class="bg-gradient-to-r from-wb-900 via-slate-900 to-slate-900 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <!-- Tartibli va Silliq Navbar -->
+    <header class="bg-slate-900/90 border-b border-slate-800/90 sticky top-0 z-30 backdrop-blur-md">
+      <div class="w-full px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 lg:gap-3">
         
-        <!-- Brand & Nav Tabs -->
-        <div class="flex items-center gap-6">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-wb-700 to-wb-500 flex items-center justify-center text-white shadow-md shadow-wb-600/30 font-black text-xl">
-              V
-            </div>
-            <div>
-              <div class="text-sm font-black tracking-wider text-white flex items-center gap-2">
-                VANGUARD <span class="text-[10px] bg-wb-500/20 text-wb-400 border border-wb-500/30 px-1.5 py-0.2 rounded font-mono">WMS</span>
-              </div>
-              <p class="text-[10px] text-slate-400">Markaziy Omborxona Portali</p>
-            </div>
+        <!-- Left: Logo & Brand -->
+        <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-wb-700 via-wb-500 to-fuchsia-400 flex items-center justify-center text-white shadow-md shadow-wb-600/30 font-black text-base sm:text-lg">
+            V
           </div>
-
-          <!-- Navigation Links: Alohida Kirim va Chiqim bo'limlari bilan -->
-          <nav class="hidden lg:flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
-            <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-wb-600 shadow transition flex items-center gap-1.5">
-              <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
-              <span>Dashboard</span>
-            </button>
-            <button onclick="switchTab('inbound')" id="tabBtn-inbound" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
-              <i data-lucide="arrow-down-left" class="w-3.5 h-3.5 text-emerald-400"></i>
-              <span>Kirim Bo'limi</span>
-            </button>
-            <button onclick="switchTab('outbound')" id="tabBtn-outbound" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
-              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-rose-400"></i>
-              <span>Chiqim Bo'limi</span>
-            </button>
-            <button onclick="switchTab('products')" id="tabBtn-products" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
-              <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
-              <span>Katalog & QR</span>
-            </button>
-            <button onclick="switchTab('users')" id="tabBtn-users" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
-              <i data-lucide="users" class="w-3.5 h-3.5"></i>
-              <span>Foydalanuvchilar</span>
-            </button>
-            <button onclick="switchTab('history')" id="tabBtn-history" class="nav-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
-              <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i>
-              <span>Jurnal (Logs)</span>
-            </button>
-          </nav>
+          <div>
+            <div class="text-xs sm:text-sm font-black tracking-wider text-white flex items-center gap-1.5 leading-none">
+              VANGUARD <span class="text-[9px] bg-wb-500/20 text-wb-400 border border-wb-500/30 px-1.5 py-0.5 rounded font-mono font-bold">WMS</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-0.5 font-medium hidden xs:block">Bosh Omborxona Portali</p>
+          </div>
         </div>
 
-        <!-- Foydalanuvchi ma'lumotlari va Amallar -->
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2.5 bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-xl">
-            <div class="w-7 h-7 rounded-lg bg-wb-600 flex items-center justify-center text-white text-xs font-bold" id="userAvatar">
+        <!-- Center: Desktop Navigation Tabs (>= 1280px / xl) -->
+        <nav class="hidden xl:flex items-center gap-0.5 2xl:gap-1 bg-slate-950/80 p-1 rounded-2xl border border-slate-800 shrink-0">
+          <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-bold text-white bg-wb-600 shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 shrink-0"></i>
+            <span>Dashboard</span>
+          </button>
+          <button onclick="switchTab('inbound')" id="tabBtn-inbound" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="arrow-down-left" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+            <span>Kirim</span>
+          </button>
+          <button onclick="switchTab('outbound')" id="tabBtn-outbound" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-rose-400 shrink-0"></i>
+            <span>Chiqim</span>
+          </button>
+          <button onclick="switchTab('products')" id="tabBtn-products" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="boxes" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
+            <span>Katalog</span>
+          </button>
+          <button onclick="switchTab('categories')" id="tabBtn-categories" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="tags" class="w-3.5 h-3.5 text-fuchsia-400 shrink-0"></i>
+            <span>Kategoriyalar</span>
+          </button>
+          <button onclick="switchTab('users')" id="tabBtn-users" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-sky-400 shrink-0"></i>
+            <span>Xodimlar</span>
+          </button>
+          <button onclick="switchTab('history')" id="tabBtn-history" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="clipboard-list" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+            <span>Jurnal</span>
+          </button>
+          <button onclick="switchTab('settings')" id="tabBtn-settings" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="bot" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
+            <span>Sozlamalar</span>
+          </button>
+        </nav>
+
+        <!-- Right: Hardware Scanner Indicator, SQLite Status, Skaner, User Info & Logout -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <!-- USB/Hardware Scanner Indicator -->
+          <div class="hidden sm:flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-bold bg-slate-800/80 border border-slate-700/60 text-slate-300" title="Qo'l skaner apparati (USB/Bluetooth) ulangan va doim faol">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <i data-lucide="barcode" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span class="hidden 2xl:inline text-emerald-400">USB/BT Skaner</span>
+          </div>
+
+          <!-- SQLite Baza Holati -->
+          <div id="serverStatusBadge" class="hidden sm:flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-bold bg-slate-800/80 border border-slate-700/60" title="SQLite Baza">
+            <span id="serverStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="serverStatusText" class="hidden 2xl:inline text-emerald-400">SQLite Baza</span>
+          </div>
+
+          <!-- QR Skaner (Kamera) - Desktop/Planshetda -->
+          <button onclick="openScannerModal()" class="hidden md:flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition active:scale-95" title="Kamera orqali QR/Shtrix-kod skanerlash">
+            <i data-lucide="scan" class="w-4 h-4"></i>
+            <span class="hidden 2xl:inline">QR Skaner</span>
+          </button>
+
+          <!-- User Profil Pill -->
+          <div class="flex items-center gap-1.5 bg-slate-800/70 border border-slate-700/60 p-1 sm:px-2 sm:py-1 rounded-xl" title="Foydalanuvchi">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-wb-700 to-wb-500 flex items-center justify-center text-white text-xs font-bold" id="userAvatar">
               SA
             </div>
-            <div class="text-left hidden sm:block">
-              <p class="text-xs font-bold text-slate-200 leading-tight" id="userNameLabel">Super Admin</p>
-              <p class="text-[10px] text-wb-400 font-semibold" id="userRoleBadge">Super Admin</p>
+            <div class="text-left hidden 2xl:block leading-tight pr-1">
+              <p class="text-xs font-bold text-slate-100 max-w-[100px] truncate" id="userNameLabel">Super Admin</p>
+              <p class="text-[9px] text-wb-400 font-semibold" id="userRoleBadge">Super Admin</p>
             </div>
           </div>
 
-          <!-- Tezkor Skaner -->
-          <button onclick="openScannerModal()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-md transition" title="Kamera orqali skanerlash">
-            <i data-lucide="qr-code" class="w-4 h-4"></i>
-            <span class="hidden sm:inline">Skaner</span>
-          </button>
-
-          <!-- Chiqish (Logout) -->
-          <button onclick="handleLogout()" class="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/20 text-slate-400 hover:text-rose-400 border border-slate-700/60 transition" title="Tizimdan chiqish">
+          <!-- Chiqish tugmasi -->
+          <button onclick="handleLogout()" class="p-2 rounded-xl bg-slate-800/70 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700/60 transition" title="Tizimdan chiqish">
             <i data-lucide="log-out" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
 
-      <!-- Mobil Menyu Bar -->
-      <div class="flex lg:hidden overflow-x-auto px-4 py-2 border-t border-slate-800 gap-1.5 custom-scrollbar">
-        <button onclick="switchTab('dashboard')" class="px-2.5 py-1 text-xs font-medium rounded-lg text-slate-300 whitespace-nowrap bg-slate-800">Dashboard</button>
-        <button onclick="switchTab('inbound')" class="px-2.5 py-1 text-xs font-medium rounded-lg text-emerald-400 whitespace-nowrap bg-slate-800">Kirim (+)</button>
-        <button onclick="switchTab('outbound')" class="px-2.5 py-1 text-xs font-medium rounded-lg text-rose-400 whitespace-nowrap bg-slate-800">Chiqim (-)</button>
-        <button onclick="switchTab('products')" class="px-2.5 py-1 text-xs font-medium rounded-lg text-slate-300 whitespace-nowrap bg-slate-800">Katalog</button>
-        <button onclick="switchTab('users')" id="mobileUsersTab" class="px-2.5 py-1 text-xs font-medium rounded-lg text-slate-300 whitespace-nowrap bg-slate-800">Xodimlar</button>
-        <button onclick="switchTab('history')" class="px-2.5 py-1 text-xs font-medium rounded-lg text-slate-300 whitespace-nowrap bg-slate-800">Tarix</button>
+      <!-- Planshet va Noutbuklar uchun Ixcham Icon-Nav Bar (Mobilda butunlay yashiringan: 'hidden md:flex xl:hidden') -->
+      <div id="subNavBar" class="hidden md:flex xl:hidden items-center justify-center overflow-x-auto no-scrollbar px-3 sm:px-6 py-2 border-t border-slate-800/80 gap-1.5 sm:gap-2 bg-slate-900/95 sticky top-16 z-20 backdrop-blur">
+        <button onclick="switchTab('dashboard')" id="subTabBtn-dashboard" title="Dashboard" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-bold text-white bg-wb-600 shadow-md transition flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i>
+          <span class="hidden lg:inline">Dashboard</span>
+        </button>
+        <button onclick="switchTab('inbound')" id="subTabBtn-inbound" title="Kirim Bo'limi" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
+          <i data-lucide="arrow-down-left" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+          <span class="hidden lg:inline">Kirim</span>
+        </button>
+        <button onclick="switchTab('outbound')" id="subTabBtn-outbound" title="Chiqim Bo'limi" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
+          <i data-lucide="arrow-up-right" class="w-4 h-4 text-rose-400 shrink-0"></i>
+          <span class="hidden lg:inline">Chiqim</span>
+        </button>
+        <button onclick="switchTab('products')" id="subTabBtn-products" title="Katalog & QR" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
+          <i data-lucide="boxes" class="w-4 h-4 text-indigo-400 shrink-0"></i>
+          <span class="hidden lg:inline">Katalog & QR</span>
+        </button>
+        <button onclick="switchTab('categories')" id="subTabBtn-categories" title="Kategoriyalar" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
+          <i data-lucide="tags" class="w-4 h-4 text-fuchsia-400 shrink-0"></i>
+          <span class="hidden lg:inline">Kategoriyalar</span>
+        </button>
+        <button onclick="switchTab('users')" id="subTabBtn-users" title="Xodimlar" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
+          <i data-lucide="users" class="w-4 h-4 text-sky-400 shrink-0"></i>
+          <span class="hidden lg:inline">Xodimlar</span>
+        </button>
+        <button onclick="switchTab('history')" id="subTabBtn-history" title="Audit Jurnali" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
+          <i data-lucide="clipboard-list" class="w-4 h-4 text-amber-400 shrink-0"></i>
+          <span class="hidden lg:inline">Audit Jurnali</span>
+        </button>
+        <button onclick="switchTab('settings')" id="subTabBtn-settings" title="Bot & Sozlamalar" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
+          <i data-lucide="bot" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+          <span class="hidden lg:inline">Bot & Sozlamalar</span>
+        </button>
       </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 pb-24 md:pb-8">
 
-      <!-- ==================== 1. DASHBOARD ==================== -->
+      <!-- ==================== 1. PROFESSIONAL EXECUTIVE DASHBOARD ==================== -->
       <section id="tab-dashboard" class="tab-content space-y-6">
-        <!-- Banner -->
-        <div class="bg-gradient-to-r from-wb-800 via-purple-900 to-slate-900 rounded-3xl p-6 border border-wb-500/30 shadow-xl relative overflow-hidden">
+        
+        <!-- Yuqori Asosiy Status Bloki -->
+        <div class="bg-gradient-to-r from-wb-900 via-slate-900 to-slate-900 rounded-3xl p-6 border border-wb-500/30 shadow-xl relative overflow-hidden">
           <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <span class="px-3 py-1 rounded-full bg-wb-500/30 text-wb-200 text-xs font-semibold border border-wb-400/30">Vanguard WMS Pro</span>
-              <h2 class="text-2xl font-black text-white mt-2">Omborxona Statistikasi va Balansi</h2>
-              <p class="text-xs text-purple-200 mt-1">Har bir mahsulot atributlariga qarab avtomatik SKU va Shtrix-kod shakllanadi.</p>
-            </div>
-            <div class="flex gap-2">
-              <button onclick="switchTab('inbound')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg transition flex items-center gap-1.5">
-                <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
-                Kirim qilish
-              </button>
-              <button onclick="switchTab('outbound')" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-lg transition flex items-center gap-1.5">
-                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
-                Chiqim qilish
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4 Stat Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div class="flex items-center justify-between text-slate-400 text-xs font-bold uppercase">
-              <span>Ombor Pul Qiymati</span>
-              <i data-lucide="banknote" class="w-4 h-4 text-emerald-400"></i>
-            </div>
-            <div class="mt-2 text-2xl font-black text-emerald-400" id="dashTotalValue">0 so'm</div>
-            <p class="text-[11px] text-slate-500 mt-1">Hozirgi barcha mahsulotlar tannarxi</p>
-          </div>
-
-          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div class="flex items-center justify-between text-slate-400 text-xs font-bold uppercase">
-              <span>Tovarlar Zaxirasi</span>
-              <i data-lucide="package" class="w-4 h-4 text-wb-400"></i>
-            </div>
-            <div class="mt-2 text-2xl font-black text-white" id="dashTotalItems">0 xil</div>
-            <p class="text-[11px] text-slate-500 mt-1"><span id="dashTotalUnits" class="text-slate-300 font-bold">0</span> jami dona</p>
-          </div>
-
-          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 cursor-pointer hover:border-amber-500/50 transition" onclick="switchTab('products'); filterByStatus('lowStock')">
-            <div class="flex items-center justify-between text-slate-400 text-xs font-bold uppercase">
-              <span>Minimal Qoldiq</span>
-              <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
-            </div>
-            <div class="mt-2 text-2xl font-black text-amber-400" id="dashLowStock">0 ta</div>
-            <p class="text-[11px] text-slate-500 mt-1">Zaxirasi tugayotgan tovarlar</p>
-          </div>
-
-          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div class="flex items-center justify-between text-slate-400 text-xs font-bold uppercase">
-              <span>Bugungi Aylanma</span>
-              <i data-lucide="activity" class="w-4 h-4 text-sky-400"></i>
-            </div>
-            <div class="mt-2 text-2xl font-black text-sky-400" id="dashTodayMoves">0 amal</div>
-            <p class="text-[11px] text-slate-500 mt-1">Bugun amalga oshirilgan kirim-chiqimlar</p>
-          </div>
-        </div>
-
-        <!-- Recent Logs & Flow Chart Card -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                <i data-lucide="history" class="w-4 h-4 text-wb-400"></i>
-                So'nggi Kirim va Chiqim Operatsiyalari
-              </h3>
-              <button onclick="switchTab('history')" class="text-xs text-wb-400 hover:underline font-semibold">Hammasi &rarr;</button>
-            </div>
-            <div class="space-y-2.5" id="dashRecentLogs">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
-
-          <!-- Quick Action helper card -->
-          <div class="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
-            <div>
-              <div class="w-10 h-10 rounded-xl bg-wb-500/20 text-wb-400 flex items-center justify-center mb-3">
-                <i data-lucide="zap" class="w-5 h-5"></i>
+              <div class="flex items-center gap-2">
+                <span class="px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-bold border border-emerald-500/30 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Baza Toza & Faol
+                </span>
+                <span class="text-xs text-slate-400" id="liveClockDisplay">2026-10-18</span>
               </div>
-              <h4 class="text-sm font-bold text-white">Avtomatik SKU & Yorliqlar</h4>
-              <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                Yangi mahsulot nomini va parametrlarini kiritishingiz bilanoq tizim o'zi tushunarli SKU kodini shakllantiradi va termo-printer uchun EAN shtrix-kod tayyorlaydi.
-              </p>
+              <h2 class="text-2xl font-black text-white mt-2">Omborxona Markaziy Dashboardi</h2>
+              <p class="text-xs text-slate-400 mt-1">Hozirda baza 0 dan boshlash uchun tozalangan. O'zingiz yangi kategoriya va tovarlar kiritishingiz mumkin.</p>
             </div>
-            <div class="mt-4 pt-3 border-t border-slate-800 space-y-2">
-              <button onclick="openProductModal()" class="w-full py-2.5 bg-wb-600 hover:bg-wb-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
-                <i data-lucide="plus" class="w-4 h-4"></i>
-                Yangi Tovar Qo'shish
+            
+            <div class="flex items-center gap-2.5">
+              <button onclick="switchTab('categories')" class="px-4 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl text-xs font-bold shadow-lg transition flex items-center gap-1.5 active:scale-95">
+                <i data-lucide="tags" class="w-4 h-4"></i>
+                <span>Kategoriyalar</span>
+              </button>
+              <button onclick="openProductModal()" class="px-4 py-2.5 bg-wb-600 hover:bg-wb-500 text-white rounded-xl text-xs font-bold shadow-lg transition flex items-center gap-1.5 active:scale-95">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Yangi Mahsulot</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- 4 Asosiy KPI Kartalar (Mobilda 2 tadan chiroyli sig'adi) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-5 shadow-sm">
+            <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <span class="truncate">Jami Qiymat</span>
+              <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                <i data-lucide="banknote" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+              </div>
+            </div>
+            <div class="mt-1 sm:mt-2 text-base sm:text-2xl font-black text-emerald-400 truncate" id="dashTotalValue">0 so'm</div>
+            <div class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">Jami tovarlar tannarxi</div>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-5 shadow-sm">
+            <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <span class="truncate">Mavjud Zaxira</span>
+              <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+                <i data-lucide="package" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+              </div>
+            </div>
+            <div class="mt-1 sm:mt-2 text-base sm:text-2xl font-black text-white truncate" id="dashTotalItems">0 xil</div>
+            <div class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">
+              Jami: <span id="dashTotalUnits" class="text-slate-200 font-bold">0</span> dona
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-5 shadow-sm">
+            <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <span class="truncate">Kam Qoldiq</span>
+              <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+              </div>
+            </div>
+            <div class="mt-1 sm:mt-2 text-base sm:text-2xl font-black text-amber-400 truncate" id="dashLowStock">0 ta</div>
+            <div class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">Zaxirasi tugayotgan</div>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-5 shadow-sm">
+            <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <span class="truncate">Operatsiyalar</span>
+              <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
+                <i data-lucide="activity" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+              </div>
+            </div>
+            <div class="mt-1 sm:mt-2 text-base sm:text-2xl font-black text-sky-400 truncate" id="dashTodayMoves">0 amal</div>
+            <div class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate" id="dashTodayInOutSummary">Kirim: 0 • Chiqim: 0</div>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i data-lucide="bar-chart-3" class="w-4 h-4 text-wb-400"></i>
+                  Haftalik Tovarlar Aylanmasi (Kirim vs Chiqim)
+                </h3>
+                <p class="text-[11px] text-slate-400">Kunlar kesimida tovarlar oqimi</p>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Oxirgi 7 kun</span>
+            </div>
+            
+            <div class="relative h-60 w-full flex items-center justify-center">
+              <canvas id="flowChart"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
+                <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-400"></i>
+                Kategoriyalar Taqsimoti
+              </h3>
+              <p class="text-[11px] text-slate-400 mb-3">Yaratilgan kategoriyalar bo'yicha tovarlar nisbati</p>
+              
+              <div class="relative h-44 w-full flex items-center justify-center">
+                <canvas id="categoryDoughnutChart"></canvas>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800/80 mt-2">
+              <div class="flex justify-between text-xs font-semibold mb-1">
+                <span class="text-slate-400">Baza Holati:</span>
+                <span class="text-emerald-400 font-bold" id="dashCapacityPercent">Yangi (Bo'sh)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- So'nggi Harakatlar -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="clock" class="w-4 h-4 text-sky-400"></i>
+              So'nggi Kirim-Chiqim Lentalari
+            </h3>
+            <button onclick="switchTab('history')" class="text-xs text-wb-400 hover:underline font-semibold">Hammasi &rarr;</button>
+          </div>
+          <div class="space-y-2" id="dashRecentLogs">
+            <!-- Dynamically populated or clean zero state -->
           </div>
         </div>
       </section>
 
-      <!-- ==================== 2. ALOHIDA KIRIM BO'LIMI (INBOUND) ==================== -->
-      <section id="tab-inbound" class="tab-content hidden space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- ==================== 2. KATEGORIYALAR BOSHQARUVI (ADMIN O'ZI YARATADI) ==================== -->
+      <section id="tab-categories" class="tab-content hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          <!-- Kirim Formasi (Form) -->
-          <div class="lg:col-span-1 bg-slate-900/80 border border-emerald-500/30 rounded-3xl p-5 shadow-xl">
+          <!-- Yangi Kategoriya Yaratish Formasi -->
+          <div class="lg:col-span-4 bg-slate-900/80 border border-fuchsia-500/30 rounded-3xl p-5 shadow-xl">
+            <div class="flex items-center gap-2.5 mb-4 pb-3 border-b border-slate-800">
+              <div class="w-9 h-9 rounded-xl bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center font-bold">
+                <i data-lucide="folder-plus" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white">Yangi Kategoriya Yaratish</h3>
+                <p class="text-[11px] text-slate-400">Omboringizdagi tovar turlari uchun</p>
+              </div>
+            </div>
+
+            <form id="categoryForm" onsubmit="handleCategorySubmit(event)" class="space-y-3.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Kategoriya Nomi *</label>
+                <input type="text" id="catNameInput" required placeholder="Masalan: Avto ehtiyot qismlar" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-fuchsia-500">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Qisqa Tavsif / Izoh</label>
+                <input type="text" id="catDescInput" placeholder="Masalan: Motor va moy mahsulotlari" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-fuchsia-500">
+              </div>
+
+              <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-fuchsia-600 to-wb-600 hover:from-fuchsia-500 hover:to-wb-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-fuchsia-600/20 transition flex items-center justify-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Kategoriyani Saqlash</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Yaratilgan Kategoriyalar Ro'yxati -->
+          <div class="lg:col-span-8 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i data-lucide="tags" class="w-4 h-4 text-fuchsia-400"></i>
+                  Mavjud Kategoriyalar Ro'yxati
+                </h3>
+                <span class="text-xs text-fuchsia-400 font-semibold" id="catCountBadge">0 ta kategoriya</span>
+              </div>
+
+              <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left text-xs text-slate-300">
+                  <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+                    <tr>
+                      <th class="p-2.5">Kategoriya Nomi</th>
+                      <th class="p-2.5">Tavsif</th>
+                      <th class="p-2.5">Birlashgan Tovarlar</th>
+                      <th class="p-2.5 text-right">Amallar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="categoriesTableBody" class="divide-y divide-slate-800">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-slate-500 mt-4 text-right">
+              Admin o'zi xohlagancha yangi kategoriya qo'shishi yoki o'chirishi mumkin.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== 3. ALOHIDA KIRIM BO'LIMI (INBOUND) ==================== -->
+      <section id="tab-inbound" class="tab-content hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <div class="lg:col-span-5 bg-slate-900/80 border border-emerald-500/30 rounded-3xl p-5 shadow-xl">
             <div class="flex items-center gap-2.5 mb-4 pb-3 border-b border-slate-800">
               <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
                 <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
               </div>
               <div>
                 <h3 class="text-sm font-bold text-white">Tovarni Kirim Qilish</h3>
-                <p class="text-[11px] text-slate-400">Omborga qabul qilingan mahsulotlar</p>
+                <p class="text-[11px] text-slate-400">Omborga qabul qilinayotgan tovarlar</p>
               </div>
             </div>
 
             <form id="inboundForm" onsubmit="handleInboundSubmit(event)" class="space-y-3.5">
-              <!-- Select Product -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Mahsulotni tanlang *</label>
-                <div class="flex gap-2">
-                  <select id="inboundProductSelect" onchange="updateInboundSelectedProduct()" required class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+                <div class="flex gap-2 items-center w-full">
+                  <select id="inboundProductSelect" onchange="updateInboundSelectedProduct()" required class="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
                     <option value="">Mahsulotni tanlang...</option>
                   </select>
-                  <button type="button" onclick="openScannerModal()" class="p-2 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded-xl" title="Skaner orqali tanlash">
+                  <button type="button" onclick="openScannerModal()" class="p-2 shrink-0 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded-xl transition" title="Skaner orqali tanlash">
                     <i data-lucide="camera" class="w-4 h-4"></i>
                   </button>
                 </div>
               </div>
 
-              <!-- Selected Product Info snippet -->
               <div id="inboundProdSnippet" class="hidden bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs space-y-1">
                 <div class="flex justify-between text-slate-400">
-                  <span>Hozirgi qoldiq:</span>
-                  <span id="inboundCurQty" class="font-bold text-white">0 dona</span>
+                  <span>Hozirgi zaxira:</span>
+                  <span id="inboundCurQty" class="font-bold text-white">0</span>
                 </div>
                 <div class="flex justify-between text-slate-400">
                   <span>Kirim narxi:</span>
@@ -340,25 +529,21 @@
                 </div>
               </div>
 
-              <!-- Quantity -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Qabul qilinayotgan miqdor *</label>
                 <input type="number" id="inboundQuantity" min="1" required placeholder="Masalan: 50" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
               </div>
 
-              <!-- Supplier / Ta'minotchi -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Ta'minotchi / Yetkazib beruvchi</label>
                 <input type="text" id="inboundSupplier" placeholder="Masalan: MChJ Global Supply" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
               </div>
 
-              <!-- Waybill / Nakladnaya raqami -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Hujjat / Nakladnaya №</label>
-                <input type="text" id="inboundDocNo" placeholder="Masalan: NAKL-2026-081" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-mono">
+                <input type="text" id="inboundDocNo" placeholder="Masalan: NAKL-2026-001" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-mono">
               </div>
 
-              <!-- Note -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Izoh</label>
                 <input type="text" id="inboundNote" placeholder="Yangi partiya qabul qilindi" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
@@ -371,13 +556,12 @@
             </form>
           </div>
 
-          <!-- Kirimlar Ro'yxati & Jurnali -->
-          <div class="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between">
+          <div class="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                   <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
-                  Bugungi va So'nggi Kirimlar Partiyasi
+                  So'nggi Kirim Partiyalari
                 </h3>
                 <span class="text-xs text-emerald-400 font-semibold" id="inboundTotalCount">0 ta kirim</span>
               </div>
@@ -402,18 +586,17 @@
             </div>
             
             <p class="text-[11px] text-slate-500 mt-4 text-right">
-              Har bir kirimdan so'ng tovar qoldig'i real vaqtda yangilanadi.
+              Har bir qabul qilingan tovar uchun avtomatik termo-stiker generatsiya bo'ladi.
             </p>
           </div>
         </div>
       </section>
 
-      <!-- ==================== 3. ALOHIDA CHIQIM BO'LIMI (OUTBOUND) ==================== -->
+      <!-- ==================== 4. ALOHIDA CHIQIM BO'LIMI (OUTBOUND) ==================== -->
       <section id="tab-outbound" class="tab-content hidden space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          <!-- Chiqim Formasi (Form) -->
-          <div class="lg:col-span-1 bg-slate-900/80 border border-rose-500/30 rounded-3xl p-5 shadow-xl">
+          <div class="lg:col-span-5 bg-slate-900/80 border border-rose-500/30 rounded-3xl p-5 shadow-xl">
             <div class="flex items-center gap-2.5 mb-4 pb-3 border-b border-slate-800">
               <div class="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
                 <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
@@ -425,24 +608,22 @@
             </div>
 
             <form id="outboundForm" onsubmit="handleOutboundSubmit(event)" class="space-y-3.5">
-              <!-- Select Product -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Chiqarilayotgan mahsulot *</label>
-                <div class="flex gap-2">
-                  <select id="outboundProductSelect" onchange="updateOutboundSelectedProduct()" required class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-rose-500">
+                <div class="flex gap-2 items-center w-full">
+                  <select id="outboundProductSelect" onchange="updateOutboundSelectedProduct()" required class="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-rose-500">
                     <option value="">Mahsulotni tanlang...</option>
                   </select>
-                  <button type="button" onclick="openScannerModal()" class="p-2 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-xl" title="Skaner orqali tanlash">
+                  <button type="button" onclick="openScannerModal()" class="p-2 shrink-0 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-xl transition" title="Skaner orqali tanlash">
                     <i data-lucide="camera" class="w-4 h-4"></i>
                   </button>
                 </div>
               </div>
 
-              <!-- Selected Product Info snippet -->
               <div id="outboundProdSnippet" class="hidden bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs space-y-1">
                 <div class="flex justify-between text-slate-400">
                   <span>Mavjud zaxira:</span>
-                  <span id="outboundCurQty" class="font-bold text-emerald-400">0 dona</span>
+                  <span id="outboundCurQty" class="font-bold text-emerald-400">0</span>
                 </div>
                 <div class="flex justify-between text-slate-400">
                   <span>Sotish narxi:</span>
@@ -450,25 +631,21 @@
                 </div>
               </div>
 
-              <!-- Quantity -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Chiqim miqdori *</label>
                 <input type="number" id="outboundQuantity" min="1" required placeholder="Masalan: 10" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-rose-500">
               </div>
 
-              <!-- Customer / Filial -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Mijoz / Qabul qiluvchi filial *</label>
                 <input type="text" id="outboundCustomer" required placeholder="Masalan: Samarqand Filiali / Akmal aka" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-rose-500">
               </div>
 
-              <!-- Nakladnaya raqami -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Chiqim Nakladnaya №</label>
-                <input type="text" id="outboundDocNo" placeholder="Masalan: CHIQ-2026-042" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-rose-500 font-mono">
+                <input type="text" id="outboundDocNo" placeholder="Masalan: CHIQ-2026-001" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-rose-500 font-mono">
               </div>
 
-              <!-- Reason / Note -->
               <div>
                 <label class="block text-xs font-semibold text-slate-300 mb-1">Izoh / Sabab</label>
                 <input type="text" id="outboundNote" placeholder="Buyurtma asosida jo'natildi" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-rose-500">
@@ -481,13 +658,12 @@
             </form>
           </div>
 
-          <!-- Chiqimlar Ro'yxati & Jurnali -->
-          <div class="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between">
+          <div class="lg:col-span-7 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                   <i data-lucide="truck" class="w-4 h-4 text-rose-400"></i>
-                  So'nggi Chiqim Qilingan Partiyalar
+                  So'nggi Chiqim Partiyalari
                 </h3>
                 <span class="text-xs text-rose-400 font-semibold" id="outboundTotalCount">0 ta chiqim</span>
               </div>
@@ -512,16 +688,15 @@
             </div>
 
             <p class="text-[11px] text-slate-500 mt-4 text-right">
-              Kamomadning oldi olinadi: omborda yetarli qoldiq bo'lmasa, chiqim bloklanadi.
+              Kamomad nazorati: omborda yetarli qoldiq bo'lmasa, chiqim bloklanadi.
             </p>
           </div>
         </div>
       </section>
 
-      <!-- ==================== 4. MAHSULOTLAR KATALOGI & QR (CRUD) ==================== -->
+      <!-- ==================== 5. MAHSULOTLAR KATALOGI & QR (CRUD) ==================== -->
       <section id="tab-products" class="tab-content hidden space-y-4">
         
-        <!-- Controls: Qidiruv, Filtr, Yangi tovar -->
         <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div class="flex flex-1 flex-col sm:flex-row items-center gap-2.5">
             <div class="relative w-full sm:w-72">
@@ -554,7 +729,6 @@
           </div>
         </div>
 
-        <!-- Products Table -->
         <div class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
           <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full text-left text-xs text-slate-300">
@@ -562,7 +736,7 @@
                 <tr>
                   <th class="px-4 py-3.5">Yorliq</th>
                   <th class="px-4 py-3.5">Mahsulot Nomi & Avto-Artikul</th>
-                  <th class="px-4 py-3.5">Kategoriya & Parametrlar</th>
+                  <th class="px-4 py-3.5">Kategoriya & Birlik</th>
                   <th class="px-4 py-3.5">Qoldiq</th>
                   <th class="px-4 py-3.5">Kirim Narxi</th>
                   <th class="px-4 py-3.5">Sotish Narxi</th>
@@ -575,19 +749,20 @@
               </tbody>
             </table>
           </div>
-          <div id="prodEmptyState" class="hidden py-12 text-center text-slate-500">
-            Mahsulotlar topilmadi.
+          <div id="prodEmptyState" class="hidden py-16 text-center text-slate-500">
+            <i data-lucide="package-search" class="w-10 h-10 mx-auto mb-2 text-slate-600"></i>
+            Hozircha omborda mahsulotlar mavjud emas. Yuqoridagi "Yangi Mahsulot" tugmasi orqali qo'shing.
           </div>
         </div>
       </section>
 
-      <!-- ==================== 5. FOYDALANUVCHILAR (USER CRUD) ==================== -->
+      <!-- ==================== 6. FOYDALANUVCHILAR (USER CRUD) ==================== -->
       <section id="tab-users" class="tab-content hidden space-y-4">
         <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h3 class="text-sm font-bold text-white flex items-center gap-2">
               <i data-lucide="shield-check" class="w-4 h-4 text-wb-400"></i>
-              Foydalanuvchilar va Huquqlar (RBAC)
+              Xodimlar va Huquqlar Boshqaruvi (RBAC)
             </h3>
             <p class="text-xs text-slate-400">Super Admin, Admin va Omborchi hisoblari</p>
           </div>
@@ -619,7 +794,7 @@
         </div>
       </section>
 
-      <!-- ==================== 6. TARIX VA JURNAL (LOGS) ==================== -->
+      <!-- ==================== 7. AUDIT VA TARIX (LOGS) ==================== -->
       <section id="tab-history" class="tab-content hidden space-y-4">
         <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
           <div>
@@ -627,7 +802,7 @@
               <i data-lucide="clipboard-list" class="w-4 h-4 text-wb-400"></i>
               To'liq Audit Jurnali
             </h3>
-            <p class="text-xs text-slate-400">Har bir xodim tomonidan amalga oshirilgan operatsiyalar</p>
+            <p class="text-xs text-slate-400">Barcha xodimlar tomonidan amalga oshirilgan operatsiyalar tarixi</p>
           </div>
           <button onclick="clearHistoryLogs()" id="btnClearHistory" class="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-semibold transition">
             Tarixni tozalash
@@ -652,6 +827,163 @@
               </tbody>
             </table>
           </div>
+          <div id="fullHistoryEmpty" class="hidden py-12 text-center text-slate-500">
+            Hozircha jurnal bo'sh.
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 8. SOZLAMALAR & TELEGRAM BOT ==================== -->
+      <section id="tab-settings" class="tab-content hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Chap ustun: Telegram Bot Konfiguratsiyasi (7 cols) -->
+          <div class="lg:col-span-7 space-y-6">
+            
+            <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+              <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-lg shadow-cyan-500/10">
+                    <i data-lucide="bot" class="w-6 h-6"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold text-white">Telegram Bot Integratsiyasi</h3>
+                    <p class="text-xs text-slate-400">Kirim-chiqimlar va minimal qoldiq signallari Telegram guruhga keladi</p>
+                  </div>
+                </div>
+                <div id="botStatusBadge" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                  <span id="botStatusDot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                  <span id="botStatusText">Ulanmagan</span>
+                </div>
+              </div>
+
+              <form id="telegramSettingsForm" onsubmit="handleSaveSettings(event)" class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">
+                    Telegram Bot Token <span class="text-rose-400">*</span>
+                  </label>
+                  <div class="relative">
+                    <input type="text" id="settingBotToken" placeholder="Masalan: 7123456789:AAHk..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-cyan-500 transition">
+                  </div>
+                  <p class="text-[11px] text-slate-500 mt-1">@BotFather orqali yaratilgan bot tokeni</p>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">
+                    Telegram Chat ID / Guruh ID <span class="text-rose-400">*</span>
+                  </label>
+                  <input type="text" id="settingChatId" placeholder="Masalan: -1001234567890 yoki 987654321" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-cyan-500 transition">
+                  <p class="text-[11px] text-slate-500 mt-1">Bildirishnomalar yuboriladigan shaxsiy yoki guruh chat IDsi</p>
+                </div>
+
+                <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
+                  <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <input type="checkbox" id="settingAlertsEnabled" checked class="rounded border-slate-800 text-cyan-500 focus:ring-0">
+                    <span>Avtomatik bildirishnomalarni yoqish (Kirim, Chiqim va Kamomad)</span>
+                  </label>
+                </div>
+
+                <div class="pt-3 flex flex-wrap gap-2.5">
+                  <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-600/20 transition flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Sozlamalarni Saqlash</span>
+                  </button>
+
+                  <button type="button" onclick="testTelegramAlert()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 font-bold text-xs rounded-xl border border-slate-700/80 transition flex items-center gap-2">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Test Xabar Yuborish</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Bot Yo'riqnomasi -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-5 text-xs text-slate-400 space-y-2.5">
+              <h4 class="font-bold text-slate-200 flex items-center gap-2 text-xs">
+                <i data-lucide="help-circle" class="w-4 h-4 text-cyan-400"></i>
+                Telegram Botni ulash bo'yicha tezkor qo'llanma:
+              </h4>
+              <ol class="list-decimal list-inside space-y-1.5 text-slate-400 text-[11px] leading-relaxed">
+                <li>Telegram'da <b class="text-white">@BotFather</b> ga kiring va <code class="text-cyan-400">/newbot</code> buyrug'i orqali yangi bot yarating.</li>
+                <li>Berilgan API Tokenni yuqoridagi <b>Telegram Bot Token</b> maydoniga qo'ying.</li>
+                <li>O'z botingizga kirib <code class="text-cyan-400">/start</code> tugmasini bosing yoki guruhga qo'shing.</li>
+                <li>Chat ID raqamingizni olish uchun botga <code class="text-cyan-400">/myid</code> deb yozing va ID raqamni kiritib saqlang.</li>
+                <li><b>"Test Xabar Yuborish"</b> tugmasi orqali tekshirib ko'ring!</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- O'ng ustun: Kompaniya Rekvizitlari & SQLite Baza (5 cols) -->
+          <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Kompaniya Rekvizitlari (Nakladnoy uchun) -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl">
+              <div class="flex items-center gap-3 pb-4 border-b border-slate-800 mb-5">
+                <div class="w-10 h-10 rounded-2xl bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center">
+                  <i data-lucide="building-2" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-white">Korxona Rekvizitlari</h3>
+                  <p class="text-xs text-slate-400">A4 Nakladnoy va hisob-fakturada chop etiladigan ma'lumotlar</p>
+                </div>
+              </div>
+
+              <form id="companySettingsForm" onsubmit="handleSaveCompany(event)" class="space-y-3.5">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Tashkilot / Kompaniya Nomi</label>
+                  <input type="text" id="settingCompanyName" placeholder="Vanguard Logistics & WMS MChJ" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Telefon Raqami</label>
+                  <input type="text" id="settingCompanyPhone" placeholder="+998 71 200-00-00" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Omborxona Manzili</label>
+                  <textarea id="settingCompanyAddress" rows="2" placeholder="Toshkent sh., Markaziy Logistika Markazi, 1-Ombor" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 focus:outline-none focus:border-wb-500 resize-none"></textarea>
+                </div>
+
+                <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-wb-600 to-wb-500 hover:from-wb-500 hover:to-fuchsia-600 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                  <i data-lucide="check" class="w-4 h-4"></i>
+                  <span>Rekvizitlarni Saqlash</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Baza Holati va Server Info -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3">
+              <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <i data-lucide="database" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-white">Doimiy Ma'lumotlar Bazasi</h3>
+                  <p class="text-xs text-slate-400">Yuqori tezlikdagi o'rnatilgan SQLite dvigateli</p>
+                </div>
+              </div>
+
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between p-2 rounded-lg bg-slate-950">
+                  <span class="text-slate-400">Baza turi:</span>
+                  <span class="font-bold text-emerald-400">SQLite (wms.db)</span>
+                </div>
+                <div class="flex justify-between p-2 rounded-lg bg-slate-950">
+                  <span class="text-slate-400">Server porti:</span>
+                  <span class="font-mono text-slate-200">http://localhost:3000</span>
+                </div>
+                <div class="flex justify-between p-2 rounded-lg bg-slate-950">
+                  <span class="text-slate-400">Tarmoqdan kirish:</span>
+                  <span class="font-mono text-cyan-400">http://&lt;IP_MANZIL&gt;:3000</span>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-500">
+                Bir xil Wi-Fi tarmog'idagi telefon yoki planshet brauzeridan kompyuteringizning mahalliy IP manzili orqali to'liq foydalanish mumkin.
+              </p>
+            </div>
+
+          </div>
+
         </div>
       </section>
 
@@ -660,7 +992,7 @@
 
   <!-- ======================== MODALLAR ======================== -->
 
-  <!-- 1. MAHSULOT QO'SHISH / TAHRIRLASH (Avtomatik SKU generator bilan) -->
+  <!-- 1. MAHSULOT QO'SHISH / TAHRIRLASH (Dinamik Admin Kategoriyalari & O'lchov Birligi bilan) -->
   <div id="productModal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
@@ -679,35 +1011,32 @@
         <!-- Product Name -->
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Mahsulot Nomi *</label>
-          <input type="text" id="prodName" oninput="triggerAutoSku()" required placeholder="Masalan: Erkaklar paxtali futbolkasi" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
+          <input type="text" id="prodName" oninput="triggerAutoSku()" required placeholder="Masalan: Generator 5kW yoki Paxta Yog'i 5L" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <!-- Category -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Kategoriya (Admin o'zi yaratgan kategoriyalar ro'yxati) -->
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Kategoriya *</label>
-            <input type="text" id="prodCategory" oninput="triggerAutoSku()" required placeholder="Kiyim" list="catList" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
-            <datalist id="catList">
-              <option value="Kiyim">
-              <option value="Poyabzal">
-              <option value="Elektronika">
-              <option value="Oshxona">
-              <option value="Kosmetika">
-              <option value="Qurilish">
-              <option value="Oziq-ovqat">
-            </datalist>
+            <div class="flex justify-between items-center mb-1">
+              <label class="block text-xs font-semibold text-slate-300">Kategoriya *</label>
+              <button type="button" onclick="quickCreateCategoryPrompt()" class="text-[10px] text-fuchsia-400 hover:underline font-bold">+ Yangi Kategoriya</button>
+            </div>
+            <select id="prodCategory" onchange="triggerAutoSku()" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
+              <!-- Dynamically populated from admin categories -->
+            </select>
           </div>
 
-          <!-- Size (Razmer) -->
+          <!-- O'lchov Birligi -->
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">O'lcham (Razmer)</label>
-            <input type="text" id="prodSize" oninput="triggerAutoSku()" placeholder="XL / 42 / Std" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
-          </div>
-
-          <!-- Color (Rang) -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Rangi</label>
-            <input type="text" id="prodColor" oninput="triggerAutoSku()" placeholder="Qora / Oq" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">O'lchov Birligi *</label>
+            <select id="prodUnit" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
+              <option value="dona">Dona</option>
+              <option value="kg">Kilogramm (kg)</option>
+              <option value="litr">Litr (l)</option>
+              <option value="quti">Quti (blok)</option>
+              <option value="metr">Metr (m)</option>
+              <option value="to'plam">To'plam (komplekt)</option>
+            </select>
           </div>
         </div>
 
@@ -758,7 +1087,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Omborxona Polka / Joylashuvi</label>
-          <input type="text" id="prodLocation" placeholder="Masalan: A-Sektor, 3-Polka, 12-Javon" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
+          <input type="text" id="prodLocation" placeholder="Masalan: B-Sektor, 2-Polka, 5-Javon" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-wb-500">
         </div>
 
         <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
@@ -786,7 +1115,6 @@
         </button>
       </div>
 
-      <!-- Printable Termo-sticker Container -->
       <div id="printContainer" class="p-2">
         <div id="stickerCard" class="bg-white text-black p-4 rounded-xl border-2 border-black mx-auto text-left flex flex-col justify-between max-w-[300px]">
           <div>
@@ -798,17 +1126,15 @@
               <span class="text-[8px] font-black bg-black text-white px-1.5 py-0.5 rounded">WMS PRO</span>
             </div>
 
-            <!-- JsBarcode SVG Container -->
             <div class="flex flex-col items-center justify-center my-1 bg-white">
               <svg id="barcodeCanvas" class="max-w-full"></svg>
             </div>
 
-            <!-- QR Code and Attributes -->
             <div class="grid grid-cols-2 gap-2 items-center border-t border-black pt-1.5 mt-1">
               <div id="lblQrContainer" class="flex justify-center bg-white p-1"></div>
               <div class="text-[9px] space-y-0.5 text-black font-semibold">
-                <p id="lblProdSize">O'lcham: ---</p>
-                <p id="lblProdColor">Rang: ---</p>
+                <p id="lblProdCat">Kategoriya: ---</p>
+                <p id="lblProdUnit">Birlik: dona</p>
                 <p id="lblProdPrice" class="font-bold">Narx: ---</p>
                 <p id="lblProdLocation" class="text-gray-600">Joy: ---</p>
               </div>
@@ -832,82 +1158,124 @@
     </div>
   </div>
 
-  <!-- 3. RASMIY NAKLADNAYA / HISOB-FAKTURA MODALI (KIRIM & CHIQIM HUJJATI) -->
-  <div id="nakladnayaModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6">
-      <div class="flex justify-between items-center mb-3">
+  <!-- 3. RASMIY A4 NAKLADNOY / HISOB-FAKTURA MODALI -->
+  <div id="nakladnayaModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl shadow-2xl p-4 sm:p-6 my-auto">
+      <div class="flex justify-between items-center mb-4">
         <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
-          <span id="naklModalTitle">Omborxona Nakladnayasi</span>
+          <i data-lucide="file-check-2" class="w-5 h-5 text-emerald-400"></i>
+          <span id="naklModalTitle">Rasmiy Omborxona Nakladnoyi</span>
         </h3>
-        <button onclick="closeNakladnayaModal()" class="text-slate-400 hover:text-white p-1">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="printNakladnaya()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>A4 Chop Etish</span>
+          </button>
+          <button onclick="closeNakladnayaModal()" class="text-slate-400 hover:text-white p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
       </div>
 
-      <!-- Printable Invoice -->
-      <div id="nakladnayaDoc" class="bg-white text-slate-900 p-6 rounded-2xl border border-slate-200 text-xs space-y-4">
-        <div class="flex justify-between items-start border-b border-slate-300 pb-3">
+      <!-- A4 Bosma Maydoni (Oq qog'oz andozasi) -->
+      <div id="nakladnayaDoc" class="bg-white text-slate-950 p-6 sm:p-8 rounded-2xl border border-slate-300 text-xs shadow-sm font-sans space-y-4">
+        <!-- Hujjat Boshi -->
+        <div class="flex justify-between items-start border-b-2 border-slate-900 pb-3">
           <div>
-            <h2 class="text-base font-black text-slate-900">VANGUARD WMS PRO</h2>
-            <p class="text-[10px] text-slate-500">Toshkent Markaziy Logistika Markazi</p>
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-slate-900 text-white font-black text-center flex items-center justify-center text-sm">V</span>
+              <h2 class="text-base font-black text-slate-900 tracking-wide" id="naklCompanyName">VANGUARD LOGISTICS & WMS</h2>
+            </div>
+            <p class="text-[10px] text-slate-600 mt-0.5" id="naklCompanyAddress">Toshkent Markaziy Logistika Markazi</p>
+            <p class="text-[10px] text-slate-600" id="naklCompanyPhone">Tel: +998 71 200-00-00</p>
           </div>
           <div class="text-right">
-            <span class="text-xs font-bold font-mono px-2 py-0.5 bg-slate-100 rounded" id="naklDocNumber">NAKL-0001</span>
-            <p class="text-[10px] text-slate-500 mt-1" id="naklDate">Sana: 2026-10-18</p>
+            <h1 class="text-xs font-black uppercase tracking-wider text-slate-900" id="naklDocTypeHeader">KIRIM NAKLADNOYI</h1>
+            <div class="text-sm font-black font-mono mt-1 text-slate-900" id="naklDocNumber">№ KIR-2026-001</div>
+            <p class="text-[10px] text-slate-600 font-medium" id="naklDate">Sana: 2026-10-20</p>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 text-[11px] bg-slate-50 p-2.5 rounded-lg">
+        <!-- Rekvizitlar (2 ustun) -->
+        <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px]">
           <div>
-            <span class="text-slate-500 block">Operatsiya turi:</span>
-            <span class="font-bold text-slate-800" id="naklType">Kirim</span>
+            <span class="text-slate-500 font-medium" id="naklPartnerLabel">Yetkazib beruvchi:</span>
+            <div class="font-bold text-slate-900 text-xs mt-0.5" id="naklPartner">MChJ Global Supply</div>
           </div>
           <div>
-            <span class="text-slate-500 block" id="naklPartnerLabel">Hamkor / Mijoz:</span>
-            <span class="font-bold text-slate-800" id="naklPartner">---</span>
+            <span class="text-slate-500 font-medium">Omborxona & Joylashuv:</span>
+            <div class="font-bold text-slate-900 text-xs mt-0.5" id="naklWarehouse">Bosh Omborxona</div>
+          </div>
+          <div>
+            <span class="text-slate-500 font-medium">Mas'ul xodim (Omborchi):</span>
+            <div class="font-bold text-slate-900 text-xs mt-0.5" id="naklResponsible">Rustam Karimov</div>
+          </div>
+          <div>
+            <span class="text-slate-500 font-medium">Izoh / Asos:</span>
+            <div class="font-semibold text-slate-700 text-xs mt-0.5" id="naklNote">—</div>
           </div>
         </div>
 
-        <table class="w-full text-left text-[11px] border border-slate-200 rounded">
-          <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-            <tr>
-              <th class="p-2">Artikul (SKU)</th>
-              <th class="p-2">Mahsulot Nomi</th>
-              <th class="p-2 text-right">Miqdor</th>
-              <th class="p-2 text-right">Narxi</th>
-              <th class="p-2 text-right">Jami</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="p-2 font-mono" id="naklRowSku">---</td>
-              <td class="p-2 font-semibold" id="naklRowName">---</td>
-              <td class="p-2 text-right font-bold" id="naklRowQty">0</td>
-              <td class="p-2 text-right" id="naklRowPrice">0 so'm</td>
-              <td class="p-2 text-right font-bold text-emerald-700" id="naklRowTotal">0 so'm</td>
-            </tr>
-          </tbody>
-        </table>
+        <!-- Mahsulotlar Jadvali -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-[11px] border border-slate-300">
+            <thead class="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+              <tr>
+                <th class="p-2 border-r border-slate-300 w-8 text-center">№</th>
+                <th class="p-2 border-r border-slate-300">Shtrix-kod / Artikul</th>
+                <th class="p-2 border-r border-slate-300">Mahsulot Nomi</th>
+                <th class="p-2 border-r border-slate-300 text-center w-14">Birlik</th>
+                <th class="p-2 border-r border-slate-300 text-right w-16">Miqdor</th>
+                <th class="p-2 border-r border-slate-300 text-right w-24">Narxi</th>
+                <th class="p-2 text-right w-28">Jami (so'm)</th>
+              </tr>
+            </thead>
+            <tbody id="naklTableBody" class="divide-y border-slate-200">
+              <!-- Dynamically populated -->
+            </tbody>
+            <tfoot class="border-t-2 border-slate-900 bg-slate-50 font-bold text-slate-900">
+              <tr>
+                <td colspan="4" class="p-2 text-right uppercase">JAMI:</td>
+                <td class="p-2 text-right font-black" id="naklTotalQty">0</td>
+                <td class="p-2 text-right"></td>
+                <td class="p-2 text-right font-black text-xs" id="naklTotalSum">0 so'm</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
 
-        <div class="pt-4 border-t border-slate-300 flex justify-between items-end text-[10px] text-slate-600">
+        <div class="text-[11px] text-slate-700 italic border-b border-slate-200 pb-2">
+          Jami summa so'z bilan: <span id="naklTotalWords" class="font-semibold text-slate-900">Nol so'm 00 tiyin</span>
+        </div>
+
+        <!-- Mas'ul Imzolar Bloki -->
+        <div class="pt-4 grid grid-cols-3 gap-4 text-[10px] text-slate-700">
           <div>
-            <p>Topshirdi: ____________________</p>
-            <p class="mt-2 text-slate-400">Imzo & Muhr</p>
+            <p class="font-bold text-slate-900">Topshirdi (Yuboruvchi):</p>
+            <div class="mt-6 border-b border-slate-400"></div>
+            <p class="mt-1 text-[9px] text-slate-500">Imzo & F.I.Sh</p>
           </div>
           <div>
-            <p>Qabul qildi: ____________________</p>
-            <p class="mt-2 text-slate-400">Mas'ul xodim</p>
+            <p class="font-bold text-slate-900">Qabul qildi (Omborchi):</p>
+            <div class="mt-6 border-b border-slate-400"></div>
+            <p class="mt-1 text-[9px] text-slate-500">Imzo & F.I.Sh</p>
+          </div>
+          <div class="text-center">
+            <p class="font-bold text-slate-900">M.P. (Muhr o'rni)</p>
+            <div class="mt-3 w-14 h-14 mx-auto rounded-full border border-dashed border-slate-400 flex items-center justify-center text-[8px] text-slate-400">
+              MUHR
+            </div>
           </div>
         </div>
       </div>
 
+      <!-- Pastki boshqaruv tugmalari -->
       <div class="mt-5 flex gap-2">
-        <button onclick="printNakladnaya()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md">
+        <button onclick="printNakladnaya()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition">
           <i data-lucide="printer" class="w-4 h-4"></i>
-          <span>Nakladnayani chop etish</span>
+          <span>A4 Formatda Chop Etish (Print / PDF)</span>
         </button>
-        <button onclick="closeNakladnayaModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold">
+        <button onclick="closeNakladnayaModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold">
           Yopish
         </button>
       </div>
@@ -981,7 +1349,7 @@
     </div>
   </div>
 
-  <!-- 5. JONLI KAMERA SKANERI (QR & BARCODE) -->
+  <!-- 5. JONLI KAMERA SKANERI -->
   <div id="scannerModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md shadow-2xl p-5 flex flex-col">
       <div class="flex justify-between items-center mb-3">
@@ -1007,9 +1375,183 @@
     </div>
   </div>
 
+  <!-- ======================== 6. MOBIL PASTKI NAVIGATSIYA (BOTTOM NAV) ======================== -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 px-3 py-1 flex items-center justify-between safe-bottom shadow-2xl">
+    <button onclick="switchTab('dashboard')" id="btmNav-dashboard" class="btmnav-tab flex flex-col items-center justify-center py-1 px-2 rounded-xl text-wb-400 font-bold transition">
+      <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Asosiy</span>
+    </button>
+    <button onclick="switchTab('inbound')" id="btmNav-inbound" class="btmnav-tab flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition">
+      <i data-lucide="arrow-down-left" class="w-5 h-5 text-emerald-400"></i>
+      <span class="text-[10px] mt-0.5">Kirim</span>
+    </button>
+    
+    <!-- MARKAZDA: KO'TARILGAN DUMALOQ SKANER TUGMASI -->
+    <button onclick="openScannerModal()" class="flex flex-col items-center justify-center -mt-6 group focus:outline-none shrink-0" title="Kamera Skaneri">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-500 to-emerald-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/50 border-4 border-slate-900 group-hover:scale-105 active:scale-95 transition">
+        <i data-lucide="scan" class="w-6 h-6"></i>
+      </div>
+      <span class="text-[10px] font-bold text-emerald-400 mt-0.5">Skaner</span>
+    </button>
+
+    <button onclick="switchTab('outbound')" id="btmNav-outbound" class="btmnav-tab flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition">
+      <i data-lucide="arrow-up-right" class="w-5 h-5 text-rose-400"></i>
+      <span class="text-[10px] mt-0.5">Chiqim</span>
+    </button>
+    <button onclick="openMobileMoreMenu()" id="btmNav-more" class="btmnav-tab flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition">
+      <i data-lucide="grid" class="w-5 h-5 text-amber-400"></i>
+      <span class="text-[10px] mt-0.5">Menyu</span>
+    </button>
+  </nav>
+
+  <!-- ======================== 7. MOBIL QO'SHIMCHA MENYU (BOTTOM SHEET) ======================== -->
+  <div id="mobileMoreModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-md bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl relative">
+      <div class="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-4 sm:hidden"></div>
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="grid" class="w-4 h-4 text-wb-400"></i>
+          <span>Barcha Bo'limlar</span>
+        </h3>
+        <button onclick="closeMobileMoreMenu()" class="p-1.5 text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 py-1">
+        <button onclick="selectMobileTab('products')" class="flex items-center gap-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-indigo-500/50 text-left transition">
+          <div class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+            <i data-lucide="boxes" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-white">Katalog & QR</p>
+            <p class="text-[10px] text-slate-400">Barcha tovarlar</p>
+          </div>
+        </button>
+
+        <button onclick="selectMobileTab('categories')" class="flex items-center gap-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-fuchsia-500/50 text-left transition">
+          <div class="w-9 h-9 rounded-xl bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0">
+            <i data-lucide="tags" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-white">Kategoriyalar</p>
+            <p class="text-[10px] text-slate-400">Guruhlar</p>
+          </div>
+        </button>
+
+        <button onclick="selectMobileTab('users')" id="mobileMoreUsersBtn" class="flex items-center gap-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-sky-500/50 text-left transition">
+          <div class="w-9 h-9 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+            <i data-lucide="users" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-white">Xodimlar</p>
+            <p class="text-[10px] text-slate-400">Huquqlar</p>
+          </div>
+        </button>
+
+        <button onclick="selectMobileTab('history')" class="flex items-center gap-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/50 text-left transition">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-white">Audit Jurnali</p>
+            <p class="text-[10px] text-slate-400">Tarix & Nakladnoy</p>
+          </div>
+        </button>
+
+        <button onclick="selectMobileTab('settings')" class="flex items-center gap-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-cyan-500/50 text-left transition">
+          <div class="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+            <i data-lucide="bot" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-white">Telegram Bot</p>
+            <p class="text-[10px] text-slate-400">Sozlamalar</p>
+          </div>
+        </button>
+
+        <button onclick="closeMobileMoreMenu(); handleLogout();" class="flex items-center gap-3 p-3 rounded-2xl bg-rose-950/20 border border-rose-900/40 hover:border-rose-500/50 text-left transition">
+          <div class="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-rose-300">Chiqish</p>
+            <p class="text-[10px] text-rose-400/80">Profildan chiqish</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== 8. QO'L SKANER APPARATI NATIJA MODALI (HARDWARE SCANNER POPUP) ======================== -->
+  <div id="hwScanResultModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl w-full max-w-md shadow-2xl p-6 relative overflow-hidden">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <i data-lucide="barcode" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Skaner Apparati Natijasi</h3>
+            <p class="text-[10px] text-emerald-400 font-semibold" id="hwScanTimestamp">USB/BT Skaner orqali o'qildi</p>
+          </div>
+        </div>
+        <button onclick="closeHwScanModal()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div id="hwScanProductFound" class="space-y-4">
+        <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30" id="hwScanCategory">Kategoriya</span>
+              <h4 class="text-base font-black text-white mt-1.5" id="hwScanName">Mahsulot Nomi</h4>
+              <p class="text-xs font-mono text-slate-400 mt-0.5" id="hwScanBarcode">Shtrix-kod: 123456789</p>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold">Qoldiq</span>
+              <div class="text-xl font-black text-emerald-400" id="hwScanStock">0 dona</div>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+            <span class="text-slate-400">Kirim narxi:</span>
+            <span class="font-bold text-slate-200" id="hwScanPrice">0 so'm</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="hwScanAction('inbound')" class="py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2 active:scale-95">
+            <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+            <span>+ Kirim Qilish</span>
+          </button>
+          <button onclick="hwScanAction('outbound')" class="py-3 px-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-rose-600/30 transition flex items-center justify-center gap-2 active:scale-95">
+            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+            <span>- Chiqim Qilish</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="hwScanProductNotFound" class="hidden space-y-4 text-center py-2">
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h4 class="text-sm font-bold text-white">Yangi Shtrix-kod Aniqlandi!</h4>
+          <p class="text-xs text-slate-400 mt-1">Ushbu kod ombor bazasida mavjud emas:</p>
+          <p class="font-mono text-sm font-black text-amber-400 mt-1" id="hwScanNotFoundCode">478000123456</p>
+        </div>
+        <button onclick="hwScanCreateNewProduct()" class="w-full py-2.5 bg-gradient-to-r from-wb-600 to-wb-500 hover:from-wb-500 hover:to-fuchsia-600 text-white font-bold rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-2">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Yangi Mahsulot Sifatida Kiritish</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ======================== APPLICATION LOGIC JAVASCRIPT ======================== -->
   <script>
-    // Dastlabki Foydalanuvchilar (Rollari bilan)
+    // Dastlabki Foydalanuvchilar (Login uchun zarur)
     const INITIAL_USERS = [
       {
         id: 'usr-1',
@@ -1017,7 +1559,7 @@
         username: 'superadmin',
         password: '123456',
         role: 'superadmin',
-        warehouse: 'Toshkent Asosiy Ombori',
+        warehouse: 'Bosh Omborxona',
         status: 'active'
       },
       {
@@ -1026,7 +1568,7 @@
         username: 'admin',
         password: '123456',
         role: 'admin',
-        warehouse: 'Toshkent Asosiy Ombori',
+        warehouse: 'Bosh Omborxona',
         status: 'active'
       },
       {
@@ -1035,101 +1577,38 @@
         username: 'omborchi',
         password: '123456',
         role: 'omborchi',
-        warehouse: 'Samarqand Filiali',
+        warehouse: 'Bosh Omborxona',
         status: 'active'
       }
     ];
 
-    // Dastlabki Mahsulotlar
-    const INITIAL_PRODUCTS = [
-      {
-        id: 'prod-101',
-        barcode: '2019482019281',
-        sku: 'KIY-FUTB-L-QOR-8192',
-        name: 'Erkaklar paxtali oversize futbolkasi',
-        category: 'Kiyim',
-        size: 'L',
-        color: 'Qora',
-        price: 85000,
-        sellPrice: 150000,
-        quantity: 110,
-        minStock: 15,
-        expiryDate: '',
-        location: 'A-Qator, 3-Polka',
-        createdAt: '2026-10-15'
-      },
-      {
-        id: 'prod-102',
-        barcode: '2028491029482',
-        sku: 'POY-KROS-42-OQ-4712',
-        name: 'Sportiv krossovka Air Max',
-        category: 'Poyabzal',
-        size: '42',
-        color: 'Oq',
-        price: 210000,
-        sellPrice: 380000,
-        quantity: 14,
-        minStock: 10,
-        expiryDate: '',
-        location: 'B-Qator, 1-Polka',
-        createdAt: '2026-10-16'
-      },
-      {
-        id: 'prod-103',
-        barcode: '2039182948193',
-        sku: 'ELE-SIMS-STD-QOR-5910',
-        name: 'Simsiz Bluetooth quloqchin Pro',
-        category: 'Elektronika',
-        size: 'Standart',
-        color: 'Qora',
-        price: 95000,
-        sellPrice: 180000,
-        quantity: 4,
-        minStock: 12,
-        expiryDate: '',
-        location: 'C-Qator, Seyf-1',
-        createdAt: '2026-10-17'
-      }
-    ];
-
-    // Dastlabki Harakatlar Jurnali (Kirim & Chiqim)
-    const INITIAL_LOGS = [
-      {
-        id: 'log-1',
-        date: '2026-10-17 10:20',
-        user: 'Rustam Karimov (Super Admin)',
-        sku: 'KIY-FUTB-L-QOR-8192',
-        productName: 'Erkaklar paxtali oversize futbolkasi',
-        type: 'IN',
-        qty: 110,
-        partner: 'MChJ Textil Global',
-        docNo: 'NAKL-2026-081',
-        note: 'Yangi mavsumiy partiya qabul qilindi'
-      },
-      {
-        id: 'log-2',
-        date: '2026-10-18 09:40',
-        user: 'Jasur Saidov (Omborchi)',
-        sku: 'POY-KROS-42-OQ-4712',
-        productName: 'Sportiv krossovka Air Max',
-        type: 'OUT',
-        qty: 4,
-        partner: 'Samarqand Filiali',
-        docNo: 'CHIQ-2026-015',
-        note: 'Filial buyurtmasi bo\'yicha yuklandi'
-      }
-    ];
+    // Backend API & Server State
+    const API_BASE = (window.location.protocol.startsWith('http')) ? '' : 'http://localhost:3000';
+    let isBackendOnline = false;
+    let wmsDocuments = [];
+    let wmsSettings = {
+      company_name: 'Vanguard Logistics & WMS MChJ',
+      company_phone: '+998 71 200-00-00',
+      company_address: 'Toshkent sh., Markaziy Logistika Markazi, 1-Omborxona',
+      telegram_bot_token: '',
+      telegram_chat_id: '',
+      telegram_alerts_enabled: '1'
+    };
 
     // State
     let users = JSON.parse(localStorage.getItem('vg_users')) || INITIAL_USERS;
-    let products = JSON.parse(localStorage.getItem('vg_products')) || INITIAL_PRODUCTS;
-    let logs = JSON.parse(localStorage.getItem('vg_logs')) || INITIAL_LOGS;
+    let categories = JSON.parse(localStorage.getItem('vg_categories')) || ['Asosiy'];
+    let products = JSON.parse(localStorage.getItem('vg_products')) || [];
+    let logs = JSON.parse(localStorage.getItem('vg_logs')) || [];
     let currentUser = JSON.parse(localStorage.getItem('vg_active_user')) || null;
     let autoSkuSequence = Math.floor(1000 + Math.random() * 9000);
     let html5QrScanner = null;
+    let flowChartInstance = null;
+    let categoryChartInstance = null;
 
     function saveState() {
       localStorage.setItem('vg_users', JSON.stringify(users));
+      localStorage.setItem('vg_categories', JSON.stringify(categories));
       localStorage.setItem('vg_products', JSON.stringify(products));
       localStorage.setItem('vg_logs', JSON.stringify(logs));
       if (currentUser) {
@@ -1141,35 +1620,144 @@
     }
 
     function formatCurrency(val) {
-      return new Intl.NumberFormat('uz-UZ').format(val) + " so'm";
+      return new Intl.NumberFormat('uz-UZ').format(val || 0) + " so'm";
     }
 
-    // ==================== AVTOMATIK SKU VA SHTRIX-KOD GENERATORI ====================
+    function numberToUzbekWords(num) {
+      if (!num || isNaN(num) || num <= 0) return "Nol so'm 00 tiyin";
+      num = Math.floor(num);
+      const ones = ['', 'bir', 'ikki', 'uch', "to'rt", 'besh', 'olti', 'yetti', 'sakkiz', "to'qqiz"];
+      const tens = ['', "o'n", 'yigirma', "o'ttiz", 'qirq', 'ellik', 'oltmish', 'yetmish', 'sakson', "to'qson"];
+      const scales = ['', 'ming', 'million', 'milliard', 'trillion'];
+
+      let words = [];
+      let scaleIndex = 0;
+
+      while (num > 0) {
+        let chunk = num % 1000;
+        if (chunk > 0) {
+          let chunkWords = [];
+          let h = Math.floor(chunk / 100);
+          let t = Math.floor((chunk % 100) / 10);
+          let o = chunk % 10;
+
+          if (h > 0) {
+            chunkWords.push(h === 1 ? 'bir yuz' : ones[h] + ' yuz');
+          }
+          if (t > 0) {
+            chunkWords.push(tens[t]);
+          }
+          if (o > 0) {
+            chunkWords.push(ones[o]);
+          }
+          if (scales[scaleIndex]) {
+            chunkWords.push(scales[scaleIndex]);
+          }
+          words.unshift(chunkWords.join(' '));
+        }
+        num = Math.floor(num / 1000);
+        scaleIndex++;
+      }
+
+      const result = words.join(' ').trim();
+      return (result.charAt(0).toUpperCase() + result.slice(1)) + " so'm 00 tiyin";
+    }
+
+    // ==================== SERVER STATUS & API DATA ====================
+
+    function updateServerStatusUI(online, botConnected = false, botUsername = null) {
+      isBackendOnline = online;
+      const dot = document.getElementById('serverStatusDot');
+      const text = document.getElementById('serverStatusText');
+      if (dot && text) {
+        if (online) {
+          dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+          text.className = "text-emerald-400 font-bold";
+          text.textContent = "SQLite Online";
+        } else {
+          dot.className = "w-2 h-2 rounded-full bg-amber-400";
+          text.className = "text-amber-400 font-bold";
+          text.textContent = "Offline (Lokal)";
+        }
+      }
+
+      const botBadgeDot = document.getElementById('botStatusDot');
+      const botBadgeText = document.getElementById('botStatusText');
+      if (botBadgeDot && botBadgeText) {
+        if (botConnected) {
+          botBadgeDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+          botBadgeText.className = "text-emerald-400 font-bold";
+          botBadgeText.textContent = botUsername ? `@${botUsername} (Faol)` : "Bot Faol";
+        } else {
+          botBadgeDot.className = "w-2 h-2 rounded-full bg-slate-500";
+          botBadgeText.className = "text-slate-400 font-semibold";
+          botBadgeText.textContent = "Ulanmagan";
+        }
+      }
+    }
+
+    async function fetchInitData() {
+      try {
+        const statusRes = await fetch(`${API_BASE}/api/status`);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          updateServerStatusUI(true, statusData.botConnected, statusData.botUsername);
+
+          const [uRes, cRes, pRes, lRes, dRes, sRes] = await Promise.all([
+            fetch(`${API_BASE}/api/users`),
+            fetch(`${API_BASE}/api/categories`),
+            fetch(`${API_BASE}/api/products`),
+            fetch(`${API_BASE}/api/logs`),
+            fetch(`${API_BASE}/api/documents`),
+            fetch(`${API_BASE}/api/settings`)
+          ]);
+
+          if (uRes.ok) users = await uRes.json();
+          if (cRes.ok) {
+            const dbCats = await cRes.json();
+            if (dbCats && dbCats.length) {
+              categories = dbCats.map(c => c.name);
+            }
+          }
+          if (pRes.ok) products = await pRes.json();
+          if (lRes.ok) logs = await lRes.json();
+          if (dRes.ok) wmsDocuments = await dRes.json();
+          if (sRes.ok) {
+            wmsSettings = { ...wmsSettings, ...(await sRes.json()) };
+            populateSettingsInputs();
+          }
+
+          localStorage.setItem('vg_users', JSON.stringify(users));
+          localStorage.setItem('vg_categories', JSON.stringify(categories));
+          localStorage.setItem('vg_products', JSON.stringify(products));
+          localStorage.setItem('vg_logs', JSON.stringify(logs));
+        } else {
+          updateServerStatusUI(false);
+        }
+      } catch (err) {
+        console.warn("Backend serverga ulanish imkoni bo'lmadi. Mahalliy xotira (localStorage) faollashdi:", err.message);
+        updateServerStatusUI(false);
+      }
+      renderAll();
+    }
+
+    // ==================== AVTO-SKU VA SHTRIX-KOD ====================
 
     function triggerAutoSku() {
       const name = document.getElementById('prodName').value.trim();
       const cat = document.getElementById('prodCategory').value.trim();
-      const size = document.getElementById('prodSize').value.trim();
-      const color = document.getElementById('prodColor').value.trim();
 
-      // Qisqartmalarni shakllantirish
-      const catPrefix = cat ? cat.substring(0, 3).toUpperCase() : 'TOV';
-      
-      // Nomdan dastlabki so'zning 4 ta harfi
+      const catPrefix = cat ? cat.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase() : 'TOV';
       let namePart = 'ITEM';
       if (name) {
-        const words = name.split(/\s+/);
-        namePart = words[0].substring(0, 4).toUpperCase();
+        const cleanName = name.replace(/[^a-zA-Z0-9\s]/g, '');
+        const words = cleanName.split(/\s+/).filter(Boolean);
+        if (words.length > 0) {
+          namePart = words[0].substring(0, 4).toUpperCase();
+        }
       }
 
-      const sizePart = size ? size.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 3) : 'STD';
-      const colorPart = color ? color.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 3) : '';
-
-      let skuParts = [catPrefix, namePart, sizePart];
-      if (colorPart) skuParts.push(colorPart);
-      skuParts.push(autoSkuSequence);
-
-      document.getElementById('prodSku').value = skuParts.join('-');
+      document.getElementById('prodSku').value = `${catPrefix}-${namePart}-${autoSkuSequence}`;
 
       if (!document.getElementById('prodBarcode').value) {
         generateAutoBarcode();
@@ -1186,15 +1774,37 @@
       document.getElementById('prodBarcode').value = '20' + rand9 + '1';
     }
 
-    // ==================== AUTHENTICATION & LOGIN ====================
+    // ==================== AUTH & LOGIN ====================
 
-    function handleLogin(e) {
+    async function handleLogin(e) {
       e.preventDefault();
       const u = document.getElementById('loginUsername').value.trim();
       const p = document.getElementById('loginPassword').value.trim();
       const errEl = document.getElementById('loginError');
 
-      // Tizimdan qidirish
+      if (isBackendOnline) {
+        try {
+          const res = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            errEl.textContent = data.error || "Login yoki parol noto'g'ri!";
+            errEl.classList.remove('hidden');
+            return;
+          }
+          currentUser = data.user;
+          saveState();
+          initUserSession();
+          await fetchInitData();
+          return;
+        } catch (err) {
+          console.warn("Backend auth failed, trying offline:", err);
+        }
+      }
+
       const found = users.find(user => user.username.toLowerCase() === u.toLowerCase() && user.password === p);
 
       if (!found) {
@@ -1204,7 +1814,7 @@
       }
 
       if (found.status !== 'active') {
-        errEl.textContent = "Ushbu xodim hisobi faolsizlantirilgan! Super Adminga murojaat qiling.";
+        errEl.textContent = "Ushbu hisob faolsizlantirilgan! Super Adminga murojaat qiling.";
         errEl.classList.remove('hidden');
         return;
       }
@@ -1234,7 +1844,6 @@
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('appContainer').classList.remove('hidden');
 
-      // Header ma'lumotlari
       document.getElementById('userNameLabel').textContent = currentUser.fullName;
       const rolePretty = {
         'superadmin': 'Super Admin',
@@ -1244,26 +1853,28 @@
       document.getElementById('userRoleBadge').textContent = rolePretty;
       document.getElementById('userAvatar').textContent = currentUser.fullName.substring(0, 2).toUpperCase();
 
-      // RBAC Huquqlari
       const isSuper = currentUser.role === 'superadmin';
       const isAdmin = currentUser.role === 'admin' || isSuper;
 
-      // Foydalanuvchilar bo'limini faqat Admin va SuperAdmin ko'radi
       const tabUsers = document.getElementById('tabBtn-users');
       const mobileUsers = document.getElementById('mobileUsersTab');
+      const subUsers = document.getElementById('subTabBtn-users');
+      const mobileMoreUsers = document.getElementById('mobileMoreUsersBtn');
       if (isAdmin) {
-        tabUsers.classList.remove('hidden');
+        if (tabUsers) tabUsers.classList.remove('hidden');
         if (mobileUsers) mobileUsers.classList.remove('hidden');
+        if (subUsers) subUsers.classList.remove('hidden');
+        if (mobileMoreUsers) mobileMoreUsers.classList.remove('hidden');
       } else {
-        tabUsers.classList.add('hidden');
+        if (tabUsers) tabUsers.classList.add('hidden');
         if (mobileUsers) mobileUsers.classList.add('hidden');
+        if (subUsers) subUsers.classList.add('hidden');
+        if (mobileMoreUsers) mobileMoreUsers.classList.add('hidden');
       }
 
-      // Yangi xodim qo'shish faqat Super Admin uchun
       const btnAddUser = document.getElementById('btnAddNewUser');
       if (btnAddUser) btnAddUser.style.display = isSuper ? 'flex' : 'none';
 
-      // Tarixni tozalash faqat Super Admin uchun
       const btnClearHistory = document.getElementById('btnClearHistory');
       if (btnClearHistory) btnClearHistory.style.display = isSuper ? 'block' : 'none';
 
@@ -1271,38 +1882,402 @@
       renderAll();
     }
 
-    // ==================== TABS NAVIGATION ====================
+    // ==================== TABS SWITCHING ====================
 
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+
+      // 1. Desktop Tabs (>= xl)
       document.querySelectorAll('.nav-tab').forEach(el => {
-        el.className = "nav-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5";
+        el.className = "nav-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap";
       });
+      const btn = document.getElementById(`tabBtn-${tabName}`);
+      if (btn) {
+        btn.className = "nav-tab px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-wb-600 shadow-md transition flex items-center gap-1.5 whitespace-nowrap";
+      }
+
+      // 2. Subnav Tabs (Noutbuk & Planshetlar uchun ixcham icon-nav)
+      document.querySelectorAll('.subnav-tab').forEach(el => {
+        el.className = "subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60";
+      });
+      const subBtn = document.getElementById(`subTabBtn-${tabName}`);
+      if (subBtn) {
+        subBtn.className = "subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-bold text-white bg-wb-600 shadow-md transition flex items-center gap-1.5 whitespace-nowrap shrink-0";
+        try {
+          subBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } catch (e) {}
+      }
+
+      // 3. Mobile Bottom Nav (< md)
+      document.querySelectorAll('.btmnav-tab').forEach(el => {
+        el.className = "btmnav-tab flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition";
+      });
+      const btmBtn = document.getElementById(`btmNav-${tabName}`);
+      if (btmBtn) {
+        btmBtn.className = "btmnav-tab flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-wb-400 font-bold transition scale-105";
+      }
 
       const target = document.getElementById(`tab-${tabName}`);
       if (target) target.classList.remove('hidden');
 
-      const btn = document.getElementById(`tabBtn-${tabName}`);
-      if (btn) {
-        btn.className = "nav-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-wb-600 shadow transition flex items-center gap-1.5";
+      if (tabName === 'dashboard') {
+        renderCharts();
+      }
+      if (tabName === 'settings') {
+        populateSettingsInputs();
       }
 
       lucide.createIcons();
     }
 
-    // ==================== RENDERERS ====================
-
-    function renderAll() {
-      renderDashboard();
-      renderCategoryDropdowns();
-      renderProductsTable();
-      renderInboundSection();
-      renderOutboundSection();
-      renderUsersTable();
-      renderHistoryTable();
-      populateProductSelects();
+    function openMobileMoreMenu() {
+      const modal = document.getElementById('mobileMoreModal');
+      if (modal) modal.classList.remove('hidden');
       lucide.createIcons();
     }
+
+    function closeMobileMoreMenu() {
+      const modal = document.getElementById('mobileMoreModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function selectMobileTab(tab) {
+      closeMobileMoreMenu();
+      switchTab(tab);
+    }
+
+    // ==================== UNIVERSAL HARDWARE BARCODE SCANNER (USB / BLUETOOTH PISTOLET) ====================
+    let hwScanBuffer = '';
+    let hwLastKeyTime = Date.now();
+    let hwAudioCtx = null;
+    let hwCurrentScannedProduct = null;
+    let hwCurrentScannedBarcode = null;
+
+    function playScannerSound(isSuccess = true) {
+      try {
+        if (!hwAudioCtx) {
+          hwAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (hwAudioCtx.state === 'suspended') {
+          hwAudioCtx.resume();
+        }
+        const osc = hwAudioCtx.createOscillator();
+        const gain = hwAudioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(hwAudioCtx.destination);
+        if (isSuccess) {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1760, hwAudioCtx.currentTime); // High crisp beep (1760 Hz)
+          gain.gain.setValueAtTime(0.2, hwAudioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, hwAudioCtx.currentTime + 0.09);
+          osc.start();
+          osc.stop(hwAudioCtx.currentTime + 0.1);
+        } else {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(280, hwAudioCtx.currentTime); // Low buzz for unknown barcode
+          gain.gain.setValueAtTime(0.25, hwAudioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, hwAudioCtx.currentTime + 0.22);
+          osc.start();
+          osc.stop(hwAudioCtx.currentTime + 0.25);
+        }
+      } catch (err) {
+        console.warn("Scanner sound error:", err);
+      }
+    }
+
+    // Global Hardware Scanner Listener
+    window.addEventListener('keydown', (e) => {
+      const now = Date.now();
+      const diff = now - hwLastKeyTime;
+      hwLastKeyTime = now;
+
+      // Agar klavishlar orasidagi vaqt 120ms dan oshsa, bu qo'lda yozish deb hisoblanadi va bufer tozalanadi
+      if (diff > 120) {
+        hwScanBuffer = '';
+      }
+
+      if (e.key === 'Enter') {
+        if (hwScanBuffer.length >= 3) {
+          const barcode = hwScanBuffer.trim();
+          hwScanBuffer = '';
+          handleHardwareBarcodeScan(barcode);
+          e.preventDefault();
+          return;
+        }
+      } else if (e.key.length === 1) {
+        hwScanBuffer += e.key;
+      }
+    });
+
+    function handleHardwareBarcodeScan(barcode) {
+      if (!barcode) return;
+      console.log("⚡ Hardware Barcode Scanned:", barcode);
+
+      const found = products.find(p => 
+        (p.barcode && p.barcode.trim() === barcode.trim()) || 
+        (p.sku && p.sku.toLowerCase() === barcode.toLowerCase())
+      );
+
+      hwCurrentScannedBarcode = barcode;
+      hwCurrentScannedProduct = found || null;
+
+      // Hozirgi ochiq tabni aniqlash
+      const activeTabContent = Array.from(document.querySelectorAll('.tab-content')).find(el => !el.classList.contains('hidden'));
+      const activeTabId = activeTabContent ? activeTabContent.id.replace('tab-', '') : 'dashboard';
+
+      if (found) {
+        playScannerSound(true);
+
+        // Agar foydalanuvchi "Kirim" oynasida bo'lsa:
+        if (activeTabId === 'inbound') {
+          const select = document.getElementById('inboundProductSelect');
+          if (select) {
+            select.value = found.id;
+            updateInboundSelectedProduct();
+            const qtyInput = document.getElementById('inboundQty');
+            if (qtyInput) {
+              qtyInput.focus();
+              qtyInput.select();
+            }
+          }
+          return;
+        }
+
+        // Agar foydalanuvchi "Chiqim" oynasida bo'lsa:
+        if (activeTabId === 'outbound') {
+          const select = document.getElementById('outboundProductSelect');
+          if (select) {
+            select.value = found.id;
+            updateOutboundSelectedProduct();
+            const qtyInput = document.getElementById('outboundQty');
+            if (qtyInput) {
+              qtyInput.focus();
+              qtyInput.select();
+            }
+          }
+          return;
+        }
+
+        // Agar foydalanuvchi "Katalog" oynasida bo'lsa:
+        if (activeTabId === 'products') {
+          const searchInput = document.getElementById('productSearchInput');
+          if (searchInput) {
+            searchInput.value = found.barcode || found.sku;
+            renderProductsTable();
+          }
+          return;
+        }
+
+        // Boshqa barcha holatlarda: Qulay modal ochib berish
+        document.getElementById('hwScanCategory').textContent = typeof found.category === 'string' ? found.category : (found.category?.name || 'Asosiy');
+        document.getElementById('hwScanName').textContent = found.name;
+        document.getElementById('hwScanBarcode').textContent = `Shtrix-kod: ${found.barcode} | SKU: ${found.sku}`;
+        document.getElementById('hwScanStock').textContent = `${found.quantity || 0} ${found.unit || 'dona'}`;
+        document.getElementById('hwScanPrice').textContent = formatCurrency(found.costPrice || found.price || 0);
+
+        document.getElementById('hwScanProductFound').classList.remove('hidden');
+        document.getElementById('hwScanProductNotFound').classList.add('hidden');
+        document.getElementById('hwScanResultModal').classList.remove('hidden');
+        lucide.createIcons();
+      } else {
+        // Tovarlar bazasida topilmadi
+        playScannerSound(false);
+        document.getElementById('hwScanNotFoundCode').textContent = barcode;
+        document.getElementById('hwScanProductFound').classList.add('hidden');
+        document.getElementById('hwScanProductNotFound').classList.remove('hidden');
+        document.getElementById('hwScanResultModal').classList.remove('hidden');
+        lucide.createIcons();
+      }
+    }
+
+    function closeHwScanModal() {
+      document.getElementById('hwScanResultModal').classList.add('hidden');
+    }
+
+    function hwScanAction(type) {
+      closeHwScanModal();
+      if (!hwCurrentScannedProduct) return;
+      if (type === 'inbound') {
+        switchTab('inbound');
+        setTimeout(() => {
+          const select = document.getElementById('inboundProductSelect');
+          if (select) {
+            select.value = hwCurrentScannedProduct.id;
+            updateInboundSelectedProduct();
+            document.getElementById('inboundQty')?.focus();
+          }
+        }, 100);
+      } else if (type === 'outbound') {
+        switchTab('outbound');
+        setTimeout(() => {
+          const select = document.getElementById('outboundProductSelect');
+          if (select) {
+            select.value = hwCurrentScannedProduct.id;
+            updateOutboundSelectedProduct();
+            document.getElementById('outboundQty')?.focus();
+          }
+        }, 100);
+      }
+    }
+
+    function hwScanCreateNewProduct() {
+      closeHwScanModal();
+      openProductModal();
+      if (hwCurrentScannedBarcode) {
+        setTimeout(() => {
+          const barcodeInput = document.getElementById('prodBarcode');
+          if (barcodeInput) barcodeInput.value = hwCurrentScannedBarcode;
+          document.getElementById('prodName')?.focus();
+        }, 150);
+      }
+    }
+
+    // ==================== KATEGORIYALAR BOSHQARUVI ====================
+
+    async function handleCategorySubmit(e) {
+      e.preventDefault();
+      const catName = document.getElementById('catNameInput').value.trim();
+      const catDesc = document.getElementById('catDescInput').value.trim();
+
+      if (!catName) return;
+
+      if (categories.some(c => (typeof c === 'string' ? c : c.name).toLowerCase() === catName.toLowerCase())) {
+        alert("Bu kategoriya allaqachon mavjud!");
+        return;
+      }
+
+      if (isBackendOnline) {
+        try {
+          await fetch(`${API_BASE}/api/categories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: catName, description: catDesc })
+          });
+          document.getElementById('categoryForm').reset();
+          await fetchInitData();
+          return;
+        } catch (e) {
+          console.error("Backend category error:", e);
+        }
+      }
+
+      categories.push({
+        id: 'cat-' + Date.now(),
+        name: catName,
+        desc: catDesc || '—'
+      });
+
+      document.getElementById('categoryForm').reset();
+      saveState();
+    }
+
+    function quickCreateCategoryPrompt() {
+      const name = prompt("Yangi Kategoriya nomini kiriting:");
+      if (name && name.trim()) {
+        const cleanName = name.trim();
+        const exists = categories.some(c => (typeof c === 'string' ? c : c.name).toLowerCase() === cleanName.toLowerCase());
+        if (!exists) {
+          if (isBackendOnline) {
+            fetch(`${API_BASE}/api/categories`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: cleanName, description: 'Tezkor kiritilgan' })
+            }).then(() => fetchInitData());
+          }
+          categories.push({ id: 'cat-' + Date.now(), name: cleanName, desc: 'Tezkor kiritilgan' });
+          saveState();
+          document.getElementById('prodCategory').value = cleanName;
+          triggerAutoSku();
+        } else {
+          document.getElementById('prodCategory').value = cleanName;
+        }
+      }
+    }
+
+    async function deleteCategory(catName) {
+      const productInCat = products.some(p => p.category.toLowerCase() === catName.toLowerCase());
+      if (productInCat) {
+        alert(`Ushbu kategoriya bo'yicha tovarlar mavjud! Avval tovarlarni o'chiring yoki boshqa kategoriyaga o'tkazing.`);
+        return;
+      }
+
+      if (confirm(`Rostdan ham "${catName}" kategoriyasini o'chirmoqchimisiz?`)) {
+        if (isBackendOnline) {
+          try {
+            const dbCat = categories.find(c => (typeof c === 'string' ? c : c.name).toLowerCase() === catName.toLowerCase());
+            if (dbCat && dbCat.id) {
+              await fetch(`${API_BASE}/api/categories/${dbCat.id}`, { method: 'DELETE' });
+              await fetchInitData();
+              return;
+            }
+          } catch (e) {}
+        }
+        categories = categories.filter(c => (typeof c === 'string' ? c : c.name).toLowerCase() !== catName.toLowerCase());
+        saveState();
+      }
+    }
+
+    function renderCategoriesTable() {
+      const tbody = document.getElementById('categoriesTableBody');
+      tbody.innerHTML = '';
+      document.getElementById('catCountBadge').textContent = categories.length + " ta kategoriya";
+
+      if (categories.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">Hozircha kategoriyalar yaratilmagan.</td></tr>`;
+        return;
+      }
+
+      categories.forEach(c => {
+        const catName = typeof c === 'string' ? c : c.name;
+        const catDesc = typeof c === 'string' ? '—' : (c.desc || '—');
+        const itemCount = products.filter(p => p.category.toLowerCase() === catName.toLowerCase()).length;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="p-2.5 font-bold text-slate-100 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-fuchsia-400"></span>
+            ${escapeHtml(catName)}
+          </td>
+          <td class="p-2.5 text-slate-400">${escapeHtml(catDesc)}</td>
+          <td class="p-2.5 font-mono font-bold text-slate-300">${itemCount} ta tovar</td>
+          <td class="p-2.5 text-right">
+            <button onclick="deleteCategory('${escapeHtml(catName)}')" class="p-1 rounded-lg bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white transition" title="Kategoriyani o'chirish">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function populateCategoryDropdowns() {
+      const prodCat = document.getElementById('prodCategory');
+      const filterCat = document.getElementById('prodCatFilter');
+
+      const curProdVal = prodCat.value;
+      const curFilterVal = filterCat.value;
+
+      prodCat.innerHTML = '';
+      filterCat.innerHTML = '<option value="">Barcha Kategoriyalar</option>';
+
+      categories.forEach(c => {
+        const name = typeof c === 'string' ? c : c.name;
+        const opt1 = document.createElement('option');
+        opt1.value = name;
+        opt1.textContent = name;
+        if (name === curProdVal) opt1.selected = true;
+        prodCat.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = name;
+        opt2.textContent = name;
+        if (name === curFilterVal) opt2.selected = true;
+        filterCat.appendChild(opt2);
+      });
+    }
+
+    // ==================== DASHBOARD & CHARTS ====================
 
     function renderDashboard() {
       const totalVal = products.reduce((acc, p) => acc + (Number(p.price) * Number(p.quantity)), 0);
@@ -1315,20 +2290,27 @@
       document.getElementById('dashLowStock').textContent = lowStock + " ta";
       
       const todayStr = new Date().toISOString().split('T')[0];
-      const todayMoves = logs.filter(l => l.date.startsWith(todayStr)).length;
-      document.getElementById('dashTodayMoves').textContent = todayMoves + " amal";
+      const todayLogs = logs.filter(l => l.date.startsWith(todayStr));
+      const todayIn = todayLogs.filter(l => l.type === 'IN').reduce((acc, l) => acc + l.qty, 0);
+      const todayOut = todayLogs.filter(l => l.type === 'OUT').reduce((acc, l) => acc + l.qty, 0);
 
-      // Recent 5 logs
+      document.getElementById('dashTodayMoves').textContent = todayLogs.length + " amal";
+      document.getElementById('dashTodayInOutSummary').textContent = `Kirim: +${todayIn} • Chiqim: -${todayOut}`;
+
+      const now = new Date();
+      document.getElementById('liveClockDisplay').textContent = now.toLocaleDateString('uz-UZ', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+
+      // Recent logs
       const container = document.getElementById('dashRecentLogs');
       container.innerHTML = '';
       const recent = logs.slice(0, 5);
       if (recent.length === 0) {
-        container.innerHTML = "<p class='text-xs text-slate-500 py-3 text-center'>Harakatlar jurnali bo'sh.</p>";
+        container.innerHTML = "<p class='text-xs text-slate-500 py-6 text-center'>Baza toza. Birinchi tovar kirim qilinganda bu yerda ko'rinadi.</p>";
       } else {
         recent.forEach(l => {
           const isStockIn = l.type === 'IN';
           const div = document.createElement('div');
-          div.className = "flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80";
+          div.className = "flex items-center justify-between p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80";
           div.innerHTML = `
             <div class="flex items-center gap-2.5">
               <span class="w-7 h-7 rounded-lg ${isStockIn ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'} flex items-center justify-center text-xs font-black">
@@ -1351,18 +2333,99 @@
       }
     }
 
-    function renderCategoryDropdowns() {
-      const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
-      const select = document.getElementById('prodCatFilter');
-      const cur = select.value;
-      select.innerHTML = '<option value="">Barcha Kategoriyalar</option>';
-      categories.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        if (c === cur) opt.selected = true;
-        select.appendChild(opt);
-      });
+    function renderCharts() {
+      const ctxFlow = document.getElementById('flowChart');
+      if (ctxFlow) {
+        if (flowChartInstance) flowChartInstance.destroy();
+
+        const days = ['Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan', 'Yak'];
+        const inboundData = [0, 0, 0, 0, 0, 0, 0];
+        const outboundData = [0, 0, 0, 0, 0, 0, 0];
+
+        flowChartInstance = new Chart(ctxFlow, {
+          type: 'bar',
+          data: {
+            labels: days,
+            datasets: [
+              {
+                label: 'Kirim (+)',
+                data: inboundData,
+                backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                borderRadius: 6
+              },
+              {
+                label: 'Chiqim (-)',
+                data: outboundData,
+                backgroundColor: 'rgba(244, 63, 94, 0.85)',
+                borderRadius: 6
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } },
+              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 11 }, beginAtZero: true } }
+            }
+          }
+        });
+      }
+
+      const ctxCat = document.getElementById('categoryDoughnutChart');
+      if (ctxCat) {
+        if (categoryChartInstance) categoryChartInstance.destroy();
+
+        const catCounts = {};
+        products.forEach(p => {
+          catCounts[p.category] = (catCounts[p.category] || 0) + Number(p.quantity);
+        });
+
+        const labels = Object.keys(catCounts);
+        const data = Object.values(catCounts);
+
+        categoryChartInstance = new Chart(ctxCat, {
+          type: 'doughnut',
+          data: {
+            labels: labels.length ? labels : ['Mavjud emas'],
+            datasets: [{
+              data: data.length ? data : [1],
+              backgroundColor: data.length ? ['#cb11ab', '#10b981', '#6366f1', '#f59e0b', '#06b6d4'] : ['#334155'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } }
+              }
+            },
+            cutout: '72%'
+          }
+        });
+      }
+    }
+
+    // ==================== RENDERING ALL ====================
+
+    function renderAll() {
+      populateCategoryDropdowns();
+      renderDashboard();
+      renderCategoriesTable();
+      renderProductsTable();
+      renderInboundSection();
+      renderOutboundSection();
+      renderUsersTable();
+      renderHistoryTable();
+      populateProductSelects();
+      renderCharts();
+      lucide.createIcons();
     }
 
     function renderProductsTable() {
@@ -1433,11 +2496,11 @@
             </td>
             <td class="px-4 py-3">
               <span class="px-2 py-0.5 rounded-md bg-slate-800 text-[11px] font-medium text-slate-300">${escapeHtml(p.category)}</span>
-              <span class="text-[10px] text-slate-400 block mt-0.5">${p.size ? 'Razmer: ' + escapeHtml(p.size) : ''} ${p.color ? '| ' + escapeHtml(p.color) : ''}</span>
+              <span class="text-[10px] text-slate-400 block mt-0.5">Birlik: ${escapeHtml(p.unit || 'dona')}</span>
             </td>
             <td class="px-4 py-3">
               <span class="font-black ${qty <= min ? 'text-amber-400' : 'text-slate-100'} text-xs">
-                ${qty.toLocaleString()} dona
+                ${qty.toLocaleString()} ${escapeHtml(p.unit || 'dona')}
               </span>
               <div class="text-[9px] text-slate-500">Min: ${min}</div>
             </td>
@@ -1473,7 +2536,6 @@
       lucide.createIcons();
     }
 
-    // Dropdown selects for Inbound & Outbound
     function populateProductSelects() {
       const inSel = document.getElementById('inboundProductSelect');
       const outSel = document.getElementById('outboundProductSelect');
@@ -1487,19 +2549,19 @@
       products.forEach(p => {
         const opt1 = document.createElement('option');
         opt1.value = p.id;
-        opt1.textContent = `${p.name} (${p.sku}) - Qoldiq: ${p.quantity} dona`;
+        opt1.textContent = `${p.name} (${p.sku}) - Qoldiq: ${p.quantity} ${p.unit || 'dona'}`;
         if (p.id === inVal) opt1.selected = true;
         inSel.appendChild(opt1);
 
         const opt2 = document.createElement('option');
         opt2.value = p.id;
-        opt2.textContent = `${p.name} (${p.sku}) - Qoldiq: ${p.quantity} dona`;
+        opt2.textContent = `${p.name} (${p.sku}) - Qoldiq: ${p.quantity} ${p.unit || 'dona'}`;
         if (p.id === outVal) opt2.selected = true;
         outSel.appendChild(opt2);
       });
     }
 
-    // ==================== ALOHIDA KIRIM BO'LIMI MANTIG'I ====================
+    // ==================== INBOUND DEPARTMENT ====================
 
     function updateInboundSelectedProduct() {
       const id = document.getElementById('inboundProductSelect').value;
@@ -1510,18 +2572,18 @@
       }
       const p = products.find(prod => prod.id === id);
       if (p) {
-        document.getElementById('inboundCurQty').textContent = `${p.quantity} dona`;
+        document.getElementById('inboundCurQty').textContent = `${p.quantity} ${p.unit || 'dona'}`;
         document.getElementById('inboundCurPrice').textContent = formatCurrency(p.price);
         snippet.classList.remove('hidden');
       }
     }
 
-    function handleInboundSubmit(e) {
+    async function handleInboundSubmit(e) {
       e.preventDefault();
       const id = document.getElementById('inboundProductSelect').value;
       const qty = Number(document.getElementById('inboundQuantity').value) || 0;
       const supplier = document.getElementById('inboundSupplier').value.trim() || "Ta'minotchi";
-      const docNo = document.getElementById('inboundDocNo').value.trim() || `NAKL-${Date.now().toString().slice(-4)}`;
+      const docNo = document.getElementById('inboundDocNo').value.trim() || `KIR-${Date.now().toString().slice(-4)}`;
       const note = document.getElementById('inboundNote').value.trim();
 
       const p = products.find(prod => prod.id === id);
@@ -1535,12 +2597,71 @@
         return;
       }
 
-      // Qoldiqni oshirish
-      p.quantity = Number(p.quantity) + qty;
+      // 1. Agar backend online bo'lsa - REST API orqali amalga oshirish
+      if (isBackendOnline) {
+        try {
+          const res = await fetch(`${API_BASE}/api/operations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'IN',
+              items: [{
+                productId: p.id,
+                qty: qty,
+                price: p.price
+              }],
+              partner: supplier,
+              docNo: docNo,
+              note: note || 'Kirim qabul qilindi',
+              userName: currentUser ? currentUser.fullName : 'Xodim'
+            })
+          });
 
+          if (!res.ok) {
+            const errData = await res.json();
+            alert("Xatolik: " + (errData.error || "Operatsiyani bajarib bo'lmadi"));
+            return;
+          }
+
+          const opResult = await res.json();
+          document.getElementById('inboundForm').reset();
+          document.getElementById('inboundProdSnippet').classList.add('hidden');
+
+          // Ma'lumotlarni bazadan qayta yangilash
+          await fetchInitData();
+
+          // A4 Nakladnoyni ochish
+          openNakladnaya({
+            docNo: opResult.docNo || docNo,
+            type: 'IN',
+            date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            partner: supplier,
+            responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
+            note: note || 'Kirim qabul qilindi',
+            items: opResult.items || [{
+              name: p.name,
+              sku: p.sku,
+              barcode: p.barcode,
+              unit: p.unit || 'dona',
+              qty: qty,
+              price: p.price,
+              total: qty * p.price
+            }],
+            totalQty: opResult.totalQty || qty,
+            totalSum: opResult.totalSum || (qty * p.price)
+          });
+          return;
+        } catch (err) {
+          console.error("Backend error, falling back locally:", err);
+        }
+      }
+
+      // 2. Mahalliy xotira (Fallback)
+      p.quantity = Number(p.quantity) + qty;
+      const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
       const newLog = {
         id: 'log-' + Date.now(),
-        date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        date: dateStr,
         user: currentUser ? currentUser.fullName : 'Xodim',
         sku: p.sku,
         productName: p.name,
@@ -1548,18 +2669,37 @@
         qty: qty,
         partner: supplier,
         docNo: docNo,
-        note: note || 'Kirim qabul qilindi'
+        note: note || 'Kirim qabul qilindi',
+        unit: p.unit || 'dona',
+        price: p.price,
+        totalPrice: qty * p.price
       };
 
       logs.unshift(newLog);
       saveState();
 
-      // Formani tozalash
       document.getElementById('inboundForm').reset();
       document.getElementById('inboundProdSnippet').classList.add('hidden');
 
-      // Tovar uchun yorliq (stiker) ko'rsatish
-      showStickerLabel(p.id);
+      openNakladnaya({
+        docNo: docNo,
+        type: 'IN',
+        date: dateStr,
+        partner: supplier,
+        responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
+        note: note || 'Kirim qabul qilindi',
+        items: [{
+          name: p.name,
+          sku: p.sku,
+          barcode: p.barcode,
+          unit: p.unit || 'dona',
+          qty: qty,
+          price: p.price,
+          total: qty * p.price
+        }],
+        totalQty: qty,
+        totalSum: qty * p.price
+      });
     }
 
     function renderInboundSection() {
@@ -1578,9 +2718,9 @@
           <td class="p-2.5 font-bold text-emerald-400">+${l.qty}</td>
           <td class="p-2.5 text-slate-300">${escapeHtml(l.partner || 'Ta\'minotchi')}</td>
           <td class="p-2.5 text-right">
-            <button onclick="viewNakladnaya('${l.id}')" class="px-2 py-1 bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white rounded text-[11px] font-semibold flex items-center gap-1 ml-auto">
-              <i data-lucide="file-text" class="w-3 h-3"></i>
-              <span>Hujjat</span>
+            <button onclick="viewNakladnaya('${l.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white rounded-lg text-[11px] font-semibold flex items-center gap-1.5 ml-auto transition shadow">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              <span>Nakladnoy</span>
             </button>
           </td>
         `;
@@ -1595,7 +2735,7 @@
       updateInboundSelectedProduct();
     }
 
-    // ==================== ALOHIDA CHIQIM BO'LIMI MANTIG'I ====================
+    // ==================== OUTBOUND DEPARTMENT ====================
 
     function updateOutboundSelectedProduct() {
       const id = document.getElementById('outboundProductSelect').value;
@@ -1606,17 +2746,17 @@
       }
       const p = products.find(prod => prod.id === id);
       if (p) {
-        document.getElementById('outboundCurQty').textContent = `${p.quantity} dona`;
+        document.getElementById('outboundCurQty').textContent = `${p.quantity} ${p.unit || 'dona'}`;
         document.getElementById('outboundCurPrice').textContent = formatCurrency(p.sellPrice || p.price);
         snippet.classList.remove('hidden');
       }
     }
 
-    function handleOutboundSubmit(e) {
+    async function handleOutboundSubmit(e) {
       e.preventDefault();
       const id = document.getElementById('outboundProductSelect').value;
       const qty = Number(document.getElementById('outboundQuantity').value) || 0;
-      const customer = document.getElementById('outboundCustomer').value.trim();
+      const customer = document.getElementById('outboundCustomer').value.trim() || 'Mijoz / Filial';
       const docNo = document.getElementById('outboundDocNo').value.trim() || `CHIQ-${Date.now().toString().slice(-4)}`;
       const note = document.getElementById('outboundNote').value.trim();
 
@@ -1631,18 +2771,75 @@
         return;
       }
 
-      // Kamomad nazorati
       if (Number(p.quantity) < qty) {
-        alert(`Xatolik: Omborda yetarli tovar yo'q! Hozirda mavjud zaxira: ${p.quantity} dona.`);
+        alert(`Xatolik: Omborda yetarli tovar yo'q! Hozirda mavjud zaxira: ${p.quantity} ${p.unit || 'dona'}.`);
         return;
       }
 
-      // Qoldiqni ayirish
-      p.quantity = Number(p.quantity) - qty;
+      // 1. Agar backend online bo'lsa
+      if (isBackendOnline) {
+        try {
+          const res = await fetch(`${API_BASE}/api/operations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'OUT',
+              items: [{
+                productId: p.id,
+                qty: qty,
+                sellPrice: p.sellPrice || p.price
+              }],
+              partner: customer,
+              docNo: docNo,
+              note: note || 'Chiqim jo\'natildi',
+              userName: currentUser ? currentUser.fullName : 'Xodim'
+            })
+          });
 
+          if (!res.ok) {
+            const errData = await res.json();
+            alert("Xatolik: " + (errData.error || "Operatsiyani bajarib bo'lmadi"));
+            return;
+          }
+
+          const opResult = await res.json();
+          document.getElementById('outboundForm').reset();
+          document.getElementById('outboundProdSnippet').classList.add('hidden');
+
+          await fetchInitData();
+
+          openNakladnaya({
+            docNo: opResult.docNo || docNo,
+            type: 'OUT',
+            date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            partner: customer,
+            responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
+            note: note || 'Chiqim jo\'natildi',
+            items: opResult.items || [{
+              name: p.name,
+              sku: p.sku,
+              barcode: p.barcode,
+              unit: p.unit || 'dona',
+              qty: qty,
+              price: p.sellPrice || p.price,
+              total: qty * (p.sellPrice || p.price)
+            }],
+            totalQty: opResult.totalQty || qty,
+            totalSum: opResult.totalSum || (qty * (p.sellPrice || p.price))
+          });
+          return;
+        } catch (err) {
+          console.error("Backend error, falling back locally:", err);
+        }
+      }
+
+      // 2. Mahalliy xotira (Fallback)
+      p.quantity = Number(p.quantity) - qty;
+      const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      const itemPrice = p.sellPrice || p.price;
       const newLog = {
         id: 'log-' + Date.now(),
-        date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        date: dateStr,
         user: currentUser ? currentUser.fullName : 'Xodim',
         sku: p.sku,
         productName: p.name,
@@ -1650,18 +2847,37 @@
         qty: qty,
         partner: customer,
         docNo: docNo,
-        note: note || 'Chiqim jo\'natildi'
+        note: note || 'Chiqim jo\'natildi',
+        unit: p.unit || 'dona',
+        price: itemPrice,
+        totalPrice: qty * itemPrice
       };
 
       logs.unshift(newLog);
       saveState();
 
-      // Formani tozalash
       document.getElementById('outboundForm').reset();
       document.getElementById('outboundProdSnippet').classList.add('hidden');
 
-      // Chiqim nakladnayasini ko'rsatish
-      viewNakladnaya(newLog.id);
+      openNakladnaya({
+        docNo: docNo,
+        type: 'OUT',
+        date: dateStr,
+        partner: customer,
+        responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
+        note: note || 'Chiqim jo\'natildi',
+        items: [{
+          name: p.name,
+          sku: p.sku,
+          barcode: p.barcode,
+          unit: p.unit || 'dona',
+          qty: qty,
+          price: itemPrice,
+          total: qty * itemPrice
+        }],
+        totalQty: qty,
+        totalSum: qty * itemPrice
+      });
     }
 
     function renderOutboundSection() {
@@ -1680,9 +2896,9 @@
           <td class="p-2.5 font-bold text-rose-400">-${l.qty}</td>
           <td class="p-2.5 text-slate-300">${escapeHtml(l.partner || 'Mijoz')}</td>
           <td class="p-2.5 text-right">
-            <button onclick="viewNakladnaya('${l.id}')" class="px-2 py-1 bg-slate-800 hover:bg-rose-600 text-slate-200 hover:text-white rounded text-[11px] font-semibold flex items-center gap-1 ml-auto">
-              <i data-lucide="file-text" class="w-3 h-3"></i>
-              <span>Hujjat</span>
+            <button onclick="viewNakladnaya('${l.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-rose-600 text-slate-200 hover:text-white rounded-lg text-[11px] font-semibold flex items-center gap-1.5 ml-auto transition shadow">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              <span>Nakladnoy</span>
             </button>
           </td>
         `;
@@ -1697,43 +2913,128 @@
       updateOutboundSelectedProduct();
     }
 
-    // ==================== NAKLADNAYA / INVOICE VIEW ====================
+    // ==================== RASMIY A4 NAKLADNOY / INVOICE VIEW ====================
 
-    function viewNakladnaya(logId) {
-      const log = logs.find(l => l.id === logId);
-      if (!log) return;
+    function printNakladnaya() {
+      window.print();
+    }
 
-      const p = products.find(prod => prod.sku === log.sku) || { price: 0, sellPrice: 0 };
-      const isStockIn = log.type === 'IN';
-      const itemPrice = isStockIn ? (p.price || 0) : (p.sellPrice || p.price || 0);
-      const totalAmount = itemPrice * log.qty;
+    function openNakladnaya(doc) {
+      if (!doc) return;
 
-      document.getElementById('naklModalTitle').textContent = isStockIn ? 'Kirim Hujjati (Priemka Nakladnaya)' : 'Chiqim Hujjati (Rasxodnaya Nakladnaya)';
-      document.getElementById('naklDocNumber').textContent = log.docNo || 'NAKL-2026-001';
-      document.getElementById('naklDate').textContent = `Sana: ${log.date}`;
-      document.getElementById('naklType').textContent = isStockIn ? "Omborga Qabul Qilish (Kirim)" : "Ombordan Chiqarish (Chiqim / Sotuv)";
+      const isStockIn = doc.type === 'IN';
+      document.getElementById('naklModalTitle').textContent = isStockIn 
+        ? 'Rasmiy Kirim Nakladnoyi (Приходная накладная)' 
+        : 'Rasmiy Chiqim Nakladnoyi (Расходная накладная)';
+      document.getElementById('naklDocTypeHeader').textContent = isStockIn 
+        ? 'KIRIM NAKLADNOYI (ПРИЕМКА)' 
+        : 'CHIQIM NAKLADNOYI (ОТГРУЗКА)';
+
+      document.getElementById('naklCompanyName').textContent = wmsSettings.company_name || 'VANGUARD LOGISTICS & WMS';
+      document.getElementById('naklCompanyAddress').textContent = wmsSettings.company_address || 'Toshkent Markaziy Logistika Markazi';
+      document.getElementById('naklCompanyPhone').textContent = `Tel: ${wmsSettings.company_phone || '+998 71 200-00-00'}`;
+
+      document.getElementById('naklDocNumber').textContent = `№ ${doc.docNo || 'NAKL-0001'}`;
+      document.getElementById('naklDate').textContent = `Sana: ${doc.date || new Date().toISOString().substring(0, 10)}`;
+
       document.getElementById('naklPartnerLabel').textContent = isStockIn ? "Yetkazib beruvchi (Ta'minotchi):" : "Qabul qiluvchi (Mijoz/Filial):";
-      document.getElementById('naklPartner').textContent = log.partner || (isStockIn ? "Ta'minotchi" : "Mijoz");
+      document.getElementById('naklPartner').textContent = doc.partner || (isStockIn ? "Bosh Yetkazib Beruvchi" : "Mijoz / Filial");
+      document.getElementById('naklWarehouse').textContent = (currentUser && currentUser.warehouse) ? currentUser.warehouse : "Bosh Omborxona";
+      document.getElementById('naklResponsible').textContent = doc.responsibleUser || (currentUser ? currentUser.fullName : "Mas'ul Omborchi");
+      document.getElementById('naklNote').textContent = doc.note || "Tovarlar to'liq butunlikda qabul qilindi/topshirildi.";
 
-      document.getElementById('naklRowSku').textContent = log.sku;
-      document.getElementById('naklRowName').textContent = log.productName;
-      document.getElementById('naklRowQty').textContent = `${log.qty} dona`;
-      document.getElementById('naklRowPrice').textContent = formatCurrency(itemPrice);
-      document.getElementById('naklRowTotal').textContent = formatCurrency(totalAmount);
+      const tbody = document.getElementById('naklTableBody');
+      tbody.innerHTML = '';
+
+      let items = doc.items || [];
+      if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch (e) { items = []; }
+      }
+
+      let totalQty = 0;
+      let totalSum = 0;
+
+      items.forEach((it, idx) => {
+        const qty = Number(it.qty) || 0;
+        const price = Number(it.price) || 0;
+        const rowTotal = it.total ? Number(it.total) : (qty * price);
+
+        totalQty += qty;
+        totalSum += rowTotal;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50";
+        tr.innerHTML = `
+          <td class="p-2 border-r border-slate-300 text-center font-mono">${idx + 1}</td>
+          <td class="p-2 border-r border-slate-300 font-mono text-[10px]">
+            <div class="font-bold text-slate-900">${escapeHtml(it.sku || '—')}</div>
+            <div class="text-slate-500">${escapeHtml(it.barcode || '—')}</div>
+          </td>
+          <td class="p-2 border-r border-slate-300 font-bold text-slate-900">
+            ${escapeHtml(it.name || it.productName || 'Mahsulot')}
+          </td>
+          <td class="p-2 border-r border-slate-300 text-center">${escapeHtml(it.unit || 'dona')}</td>
+          <td class="p-2 border-r border-slate-300 text-right font-bold text-slate-900">${qty.toLocaleString()}</td>
+          <td class="p-2 border-r border-slate-300 text-right">${formatCurrency(price)}</td>
+          <td class="p-2 text-right font-black text-slate-900">${formatCurrency(rowTotal)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('naklTotalQty').textContent = totalQty.toLocaleString();
+      document.getElementById('naklTotalSum').textContent = formatCurrency(totalSum);
+      document.getElementById('naklTotalWords').textContent = numberToUzbekWords(totalSum);
 
       document.getElementById('nakladnayaModal').classList.remove('hidden');
       lucide.createIcons();
+    }
+
+    function viewNakladnaya(idOrDocNo) {
+      // 1. Documents jadvalidan qidirish
+      let doc = wmsDocuments.find(d => d.id === idOrDocNo || d.docNo === idOrDocNo);
+      if (doc) {
+        openNakladnaya(doc);
+        return;
+      }
+
+      // 2. Jurnaldan (logs) qidirish
+      const log = logs.find(l => l.id === idOrDocNo || l.docNo === idOrDocNo);
+      if (log) {
+        const p = products.find(prod => prod.sku === log.sku) || { price: log.price || 0, sellPrice: log.price || 0, unit: log.unit || 'dona' };
+        const price = log.price || (log.type === 'IN' ? p.price : (p.sellPrice || p.price));
+        const total = log.totalPrice || (price * log.qty);
+        doc = {
+          id: log.id,
+          docNo: log.docNo || 'NAKL-' + log.id.slice(-4),
+          type: log.type,
+          date: log.date,
+          partner: log.partner,
+          responsibleUser: log.user,
+          note: log.note,
+          items: [{
+            name: log.productName,
+            sku: log.sku,
+            barcode: p.barcode || '—',
+            unit: p.unit || log.unit || 'dona',
+            qty: log.qty,
+            price: price,
+            total: total
+          }],
+          totalQty: log.qty,
+          totalSum: total
+        };
+        openNakladnaya(doc);
+        return;
+      }
+
+      alert("Hujjat topilmadi!");
     }
 
     function closeNakladnayaModal() {
       document.getElementById('nakladnayaModal').classList.add('hidden');
     }
 
-    function printNakladnaya() {
-      window.print();
-    }
-
-    // ==================== TERMO-PRINTER STIKER YORLIQ ====================
+    // ==================== STIKER YORLIQ ====================
 
     function showStickerLabel(id) {
       const p = products.find(prod => prod.id === id);
@@ -1741,12 +3042,11 @@
 
       document.getElementById('lblProdName').textContent = p.name;
       document.getElementById('lblProdSku').textContent = "Artikul: " + p.sku;
-      document.getElementById('lblProdSize').textContent = "O'lcham: " + (p.size || 'Standart');
-      document.getElementById('lblProdColor').textContent = "Rang: " + (p.color || 'Asosiy');
+      document.getElementById('lblProdCat').textContent = "Kategoriya: " + p.category;
+      document.getElementById('lblProdUnit').textContent = "Birlik: " + (p.unit || 'dona');
       document.getElementById('lblProdPrice').textContent = "Narx: " + (p.sellPrice ? formatCurrency(p.sellPrice) : formatCurrency(p.price));
       document.getElementById('lblProdLocation').textContent = "Joy: " + (p.location || 'Asosiy Ombor');
 
-      // 1. Chiziqli Shtrix-kod (JsBarcode)
       try {
         JsBarcode("#barcodeCanvas", p.barcode, {
           format: "CODE128",
@@ -1761,7 +3061,6 @@
         console.error("Barcode xatosi:", e);
       }
 
-      // 2. Dinamik QR-kod (QRCode.js)
       const qrBox = document.getElementById('lblQrContainer');
       qrBox.innerHTML = '';
       const qrPayload = JSON.stringify({
@@ -1795,6 +3094,8 @@
         ? `<i data-lucide="edit" class="w-4 h-4 text-wb-400"></i><span>Mahsulotni Tahrirlash</span>`
         : `<i data-lucide="package-plus" class="w-4 h-4 text-wb-400"></i><span>Yangi Mahsulot Kiritish</span>`;
       
+      populateCategoryDropdowns();
+
       if (!isEdit) {
         document.getElementById('productForm').reset();
         document.getElementById('prodId').value = '';
@@ -1812,15 +3113,14 @@
       document.getElementById('productModal').classList.add('hidden');
     }
 
-    function handleProductSubmit(e) {
+    async function handleProductSubmit(e) {
       e.preventDefault();
-      const id = document.getElementById('prodId').value;
+      let id = document.getElementById('prodId').value;
       const barcode = document.getElementById('prodBarcode').value.trim();
       const sku = document.getElementById('prodSku').value.trim();
       const name = document.getElementById('prodName').value.trim();
-      const category = document.getElementById('prodCategory').value.trim();
-      const size = document.getElementById('prodSize').value.trim();
-      const color = document.getElementById('prodColor').value.trim();
+      const category = document.getElementById('prodCategory').value.trim() || 'Umumiy';
+      const unit = document.getElementById('prodUnit').value;
       const price = Number(document.getElementById('prodPrice').value) || 0;
       const sellPrice = Number(document.getElementById('prodSellPrice').value) || 0;
       const quantity = Number(document.getElementById('prodQuantity').value) || 0;
@@ -1828,28 +3128,62 @@
       const expiryDate = document.getElementById('prodExpiry').value;
       const location = document.getElementById('prodLocation').value.trim();
 
-      // Takrorlanmaslik tekshiruvi
       const duplicate = products.find(p => (p.barcode === barcode || p.sku.toLowerCase() === sku.toLowerCase()) && p.id !== id);
       if (duplicate) {
         alert("Xatolik: Ushbu shtrix-kod yoki Artikul allaqachon mavjud!");
         return;
       }
 
-      let targetProduct = null;
+      if (isBackendOnline) {
+        try {
+          if (id) {
+            const res = await fetch(`${API_BASE}/api/products/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location })
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              alert("Xatolik: " + err.error);
+              return;
+            }
+          } else {
+            const res = await fetch(`${API_BASE}/api/products`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location })
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              alert("Xatolik: " + err.error);
+              return;
+            }
+            const data = await res.json();
+            id = data.id;
+          }
+          await fetchInitData();
+          closeProductModal();
+          showStickerLabel(id);
+          return;
+        } catch (err) {
+          console.error("Backend product error:", err);
+        }
+      }
 
+      let targetProduct = null;
       if (id) {
         const idx = products.findIndex(p => p.id === id);
         if (idx !== -1) {
           products[idx] = {
             ...products[idx],
-            barcode, sku, name, category, size, color, price, sellPrice, quantity, minStock, expiryDate, location
+            barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location
           };
           targetProduct = products[idx];
         }
       } else {
         targetProduct = {
           id: 'prod-' + Date.now(),
-          barcode, sku, name, category, size, color, price, sellPrice, quantity, minStock, expiryDate, location,
+          barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location,
           createdAt: new Date().toISOString().split('T')[0]
         };
         products.unshift(targetProduct);
@@ -1864,7 +3198,10 @@
           qty: quantity,
           partner: 'Boshlang\'ich qabul',
           docNo: `KIR-${Date.now().toString().slice(-4)}`,
-          note: "Bazada yangi mahsulot yaratildi"
+          note: "Bazada yangi mahsulot yaratildi",
+          unit: unit || 'dona',
+          price: price,
+          totalPrice: quantity * price
         });
       }
 
@@ -1880,13 +3217,14 @@
       const p = products.find(prod => prod.id === id);
       if (!p) return;
 
+      populateCategoryDropdowns();
+
       document.getElementById('prodId').value = p.id;
       document.getElementById('prodBarcode').value = p.barcode;
       document.getElementById('prodSku').value = p.sku;
       document.getElementById('prodName').value = p.name;
       document.getElementById('prodCategory').value = p.category;
-      document.getElementById('prodSize').value = p.size || '';
-      document.getElementById('prodColor').value = p.color || '';
+      document.getElementById('prodUnit').value = p.unit || 'dona';
       document.getElementById('prodPrice').value = p.price;
       document.getElementById('prodSellPrice').value = p.sellPrice || '';
       document.getElementById('prodQuantity').value = p.quantity;
@@ -1897,11 +3235,20 @@
       openProductModal(true);
     }
 
-    function deleteProduct(id) {
+    async function deleteProduct(id) {
       const p = products.find(prod => prod.id === id);
       if (!p) return;
 
       if (confirm(`Rostdan ham "${p.name}" (${p.sku}) mahsulotini o'chirmoqchimisiz?`)) {
+        if (isBackendOnline) {
+          try {
+            await fetch(`${API_BASE}/api/products/${id}`, { method: 'DELETE' });
+            await fetchInitData();
+            return;
+          } catch (e) {
+            console.error("Backend delete product error:", e);
+          }
+        }
         products = products.filter(prod => prod.id !== id);
         saveState();
       }
@@ -1970,7 +3317,7 @@
       document.getElementById('userModal').classList.add('hidden');
     }
 
-    function handleUserSubmit(e) {
+    async function handleUserSubmit(e) {
       e.preventDefault();
       const id = document.getElementById('usrId').value;
       const fullName = document.getElementById('usrFullName').value.trim();
@@ -1984,6 +3331,30 @@
       if (duplicate) {
         alert("Xatolik: Ushbu login boshqa xodimda allaqachon mavjud!");
         return;
+      }
+
+      if (isBackendOnline) {
+        try {
+          if (id) {
+            await fetch(`${API_BASE}/api/users/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fullName, username, password, role, status, warehouse })
+            });
+          } else {
+            await fetch(`${API_BASE}/api/users`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fullName, username, password, role, status, warehouse })
+            });
+          }
+          await fetchInitData();
+          closeUserModal();
+          initUserSession();
+          return;
+        } catch (err) {
+          console.error("Backend user submit error:", err);
+        }
       }
 
       if (id) {
@@ -2021,7 +3392,7 @@
       openUserModal(true);
     }
 
-    function deleteUser(id) {
+    async function deleteUser(id) {
       const u = users.find(usr => usr.id === id);
       if (!u) return;
       if (u.role === 'superadmin') {
@@ -2030,6 +3401,13 @@
       }
 
       if (confirm(`Rostdan ham "${u.fullName}" (${u.username}) hisobini o'chirmoqchimisiz?`)) {
+        if (isBackendOnline) {
+          try {
+            await fetch(`${API_BASE}/api/users/${id}`, { method: 'DELETE' });
+            await fetchInitData();
+            return;
+          } catch (e) {}
+        }
         users = users.filter(usr => usr.id !== id);
         saveState();
       }
@@ -2095,7 +3473,6 @@
         feedback.innerHTML = `<span class='text-emerald-400 font-bold'>Topildi: ${escapeHtml(p.name)}!</span>`;
         setTimeout(() => {
           closeScannerModal();
-          // Agar foydalanuvchi Kirim bo'limida bo'lsa kirimga, Chiqimda bo'lsa chiqimga o'tkazish
           const isOutTab = !document.getElementById('tab-outbound').classList.contains('hidden');
           if (isOutTab) {
             quickActionOutbound(p.id);
@@ -2112,7 +3489,14 @@
 
     function renderHistoryTable() {
       const tbody = document.getElementById('fullHistoryTableBody');
+      const empty = document.getElementById('fullHistoryEmpty');
       tbody.innerHTML = '';
+
+      if (logs.length === 0) {
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
 
       logs.forEach(l => {
         const isStockIn = l.type === 'IN';
@@ -2154,15 +3538,14 @@
         alert("Eksport qilish uchun mahsulotlar mavjud emas!");
         return;
       }
-      const headers = ["ID", "Shtrix-kod", "Avto-SKU", "Nomi", "Kategoriya", "O'lcham", "Rang", "Kirim Narxi", "Sotish Narxi", "Qoldiq", "Minimal Limit", "Muddati", "Joylashuv"];
+      const headers = ["ID", "Shtrix-kod", "Avto-SKU", "Nomi", "Kategoriya", "O'lchov Birligi", "Kirim Narxi", "Sotish Narxi", "Qoldiq", "Minimal Limit", "Muddati", "Joylashuv"];
       const rows = products.map(p => [
         p.id,
         `"${p.barcode}"`,
         `"${p.sku}"`,
         `"${p.name.replace(/"/g, '""')}"`,
         `"${p.category}"`,
-        `"${p.size || ''}"`,
-        `"${p.color || ''}"`,
+        `"${p.unit || 'dona'}"`,
         p.price,
         p.sellPrice || 0,
         p.quantity,
@@ -2190,9 +3573,113 @@
       return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // ==================== SOZLAMALAR VA TELEGRAM BOT ====================
+
+    function populateSettingsInputs() {
+      if (document.getElementById('settingBotToken')) {
+        document.getElementById('settingBotToken').value = wmsSettings.telegram_bot_token || '';
+      }
+      if (document.getElementById('settingChatId')) {
+        document.getElementById('settingChatId').value = wmsSettings.telegram_chat_id || '';
+      }
+      if (document.getElementById('settingAlertsEnabled')) {
+        document.getElementById('settingAlertsEnabled').checked = wmsSettings.telegram_alerts_enabled !== '0';
+      }
+      if (document.getElementById('settingCompanyName')) {
+        document.getElementById('settingCompanyName').value = wmsSettings.company_name || '';
+      }
+      if (document.getElementById('settingCompanyPhone')) {
+        document.getElementById('settingCompanyPhone').value = wmsSettings.company_phone || '';
+      }
+      if (document.getElementById('settingCompanyAddress')) {
+        document.getElementById('settingCompanyAddress').value = wmsSettings.company_address || '';
+      }
+    }
+
+    async function handleSaveSettings(e) {
+      e.preventDefault();
+      const botToken = document.getElementById('settingBotToken').value.trim();
+      const chatId = document.getElementById('settingChatId').value.trim();
+      const alertsEnabled = document.getElementById('settingAlertsEnabled').checked ? '1' : '0';
+
+      wmsSettings.telegram_bot_token = botToken;
+      wmsSettings.telegram_chat_id = chatId;
+      wmsSettings.telegram_alerts_enabled = alertsEnabled;
+
+      if (isBackendOnline) {
+        try {
+          const res = await fetch(`${API_BASE}/api/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              telegram_bot_token: botToken,
+              telegram_chat_id: chatId,
+              telegram_alerts_enabled: alertsEnabled
+            })
+          });
+          const data = await res.json();
+          updateServerStatusUI(true, data.botConnected, data.botUsername);
+          alert("Telegram Bot sozlamalari muvaffaqiyatli saqlandi!");
+        } catch (err) {
+          alert("Xatolik: " + err.message);
+        }
+      } else {
+        alert("Sozlamalar saqlandi. Bot to'liq ishlashi uchun backend serverni 'npm start' orqali yoqing.");
+      }
+    }
+
+    async function handleSaveCompany(e) {
+      e.preventDefault();
+      const name = document.getElementById('settingCompanyName').value.trim();
+      const phone = document.getElementById('settingCompanyPhone').value.trim();
+      const address = document.getElementById('settingCompanyAddress').value.trim();
+
+      wmsSettings.company_name = name;
+      wmsSettings.company_phone = phone;
+      wmsSettings.company_address = address;
+
+      if (isBackendOnline) {
+        try {
+          await fetch(`${API_BASE}/api/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              company_name: name,
+              company_phone: phone,
+              company_address: address
+            })
+          });
+          alert("Korxona rekvizitlari muvaffaqiyatli saqlandi! A4 nakladnoylarda avtomatik aks etadi.");
+        } catch (err) {
+          alert("Xatolik: " + err.message);
+        }
+      } else {
+        alert("Rekvizitlar saqlandi.");
+      }
+    }
+
+    async function testTelegramAlert() {
+      if (!isBackendOnline) {
+        alert("Telegram xabarni sinab ko'rish uchun server ishga tushgan bo'lishi kerak ('npm start').");
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/telegram/test`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          alert("✅ " + (data.message || "Test xabari Telegram'ga muvaffaqiyatli yuborildi!"));
+        } else {
+          alert("⚠️ Xatolik: " + (data.error || "Xabar yuborilmadi. Token va Chat IDni tekshiring."));
+        }
+      } catch (err) {
+        alert("Server bilan bog'lanishda xatolik: " + err.message);
+      }
+    }
+
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
       initUserSession();
+      fetchInitData();
       lucide.createIcons();
     });
   </script>

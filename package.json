@@ -1,0 +1,28 @@
+{
+  "name": "wms-app",
+  "version": "1.0.0",
+  "description": "Ushbu tizim **Wildberries (WB)** omborxona va tarqatish markazlari (СЦ / Склад) standartlariga moslashtirilgan bo'lib, quyidagi yangi imkoniyatlar bilan boyitildi:",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yusufjonov1611/wms-pro.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/yusufjonov1611/wms-pro/issues"
+  },
+  "homepage": "https://github.com/yusufjonov1611/wms-pro#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "telegraf": "^4.16.3"
+  }
+}
