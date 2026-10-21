@@ -100,19 +100,18 @@
     .safe-bottom {
       padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
     }
-    @keyframes slideInRight {
-      from { opacity: 0; transform: translateX(24px); }
-      to { opacity: 1; transform: translateX(0); }
+    @keyframes sectionEnter {
+      0% {
+        opacity: 0;
+        transform: translateY(8px) scale(0.995);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
-    @keyframes slideInLeft {
-      from { opacity: 0; transform: translateX(-24px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-    .slide-in-right {
-      animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    .slide-in-left {
-      animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    .section-enter {
+      animation: sectionEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
   </style>
 </head>
@@ -181,6 +180,15 @@
               VANGUARD <span class="text-[9px] bg-wb-500/20 text-wb-400 border border-wb-500/30 px-1.5 py-0.5 rounded font-mono font-bold">WMS</span>
             </div>
             <p class="text-[10px] text-slate-400 mt-0.5 font-medium hidden xs:block">Bosh Omborxona Portali</p>
+          </div>
+        </div>
+
+        <!-- Hozirgi Faol Bo'lim (Har qanday ekranda aniq ko'rsatib turadi) -->
+        <div id="activeSectionBadge" class="flex items-center gap-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-slate-950/80 border border-emerald-500/40 shadow-sm shrink-0">
+          <span id="activeSectionDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></span>
+          <div class="leading-tight">
+            <span class="text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-widest block font-bold leading-none">Bo'lim</span>
+            <span id="activeSectionName" class="text-xs sm:text-xs font-black text-white tracking-tight">Asosiy Dashboard</span>
           </div>
         </div>
 
@@ -1390,32 +1398,32 @@
   </div>
 
   <!-- ======================== 6. MOBIL PASTKI NAVIGATSIYA (PREMIUM FLOATING DOCK) ======================== -->
-  <div class="md:hidden fixed bottom-3 left-3 right-3 z-40 max-w-md mx-auto pointer-events-none">
-    <nav class="pointer-events-auto bg-slate-900/95 backdrop-blur-2xl border border-slate-700/60 rounded-3xl px-2 py-1.5 flex items-center justify-between shadow-[0_12px_36px_rgba(0,0,0,0.85),0_0_20px_rgba(99,102,241,0.12)] ring-1 ring-white/10 safe-bottom">
+  <div class="md:hidden fixed bottom-3 left-2 right-2 z-40 max-w-md mx-auto pointer-events-none">
+    <nav class="pointer-events-auto bg-slate-900/95 backdrop-blur-2xl border border-slate-700/70 rounded-3xl p-1.5 flex items-center justify-between shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(99,102,241,0.18)] ring-1 ring-white/10 safe-bottom">
       
       <!-- Asosiy (Dashboard) -->
-      <button onclick="switchTab('dashboard')" id="btmNav-dashboard" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-white font-bold active:scale-95">
+      <button onclick="switchTab('dashboard')" id="btmNav-dashboard" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 group active:scale-95">
         <div class="relative flex items-center justify-center">
           <i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform duration-200 group-hover:scale-110"></i>
-          <span class="active-dot absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-wb-400 shadow-[0_0_8px_#818cf8]"></span>
         </div>
-        <span class="text-[10px] mt-1.5 tracking-tight">Asosiy</span>
+        <span class="text-[10px] mt-1 tracking-tight font-medium">Asosiy</span>
+        <span class="active-bar w-5 h-1 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] mt-0.5"></span>
       </button>
 
       <!-- Kirim -->
-      <button onclick="switchTab('inbound')" id="btmNav-inbound" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95">
+      <button onclick="switchTab('inbound')" id="btmNav-inbound" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 group active:scale-95">
         <div class="relative flex items-center justify-center">
-          <i data-lucide="arrow-down-circle" class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:scale-110"></i>
-          <span class="active-dot hidden absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+          <i data-lucide="arrow-down-circle" class="w-5 h-5 transition-transform duration-200 group-hover:scale-110"></i>
         </div>
-        <span class="text-[10px] mt-1.5 tracking-tight">Kirim</span>
+        <span class="text-[10px] mt-1 tracking-tight font-medium">Kirim</span>
+        <span class="active-bar hidden w-5 h-1 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] mt-0.5"></span>
       </button>
       
       <!-- MARKAZIY GLOWING SKANER TUGMASI (HERO FAB) -->
       <div class="flex-1 flex justify-center -mt-6">
         <button onclick="openScannerModal()" class="relative flex flex-col items-center justify-center group focus:outline-none active:scale-90 transition-transform duration-200" title="Kamera Skaneri">
-          <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 opacity-70 blur-md group-hover:opacity-100 animate-pulse transition"></div>
-          <div class="relative w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white flex items-center justify-center shadow-xl shadow-emerald-500/50 border-[3.5px] border-slate-950 group-hover:scale-105 transition">
+          <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 opacity-80 blur-md group-hover:opacity-100 animate-pulse transition"></div>
+          <div class="relative w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white flex items-center justify-center shadow-xl shadow-emerald-500/50 border-[3px] border-slate-950 group-hover:scale-105 transition">
             <i data-lucide="scan" class="w-6 h-6 drop-shadow"></i>
           </div>
           <span class="text-[9px] font-black text-emerald-400 tracking-wider uppercase mt-0.5">Skaner</span>
@@ -1423,21 +1431,21 @@
       </div>
 
       <!-- Chiqim -->
-      <button onclick="switchTab('outbound')" id="btmNav-outbound" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95">
+      <button onclick="switchTab('outbound')" id="btmNav-outbound" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 group active:scale-95">
         <div class="relative flex items-center justify-center">
-          <i data-lucide="arrow-up-circle" class="w-5 h-5 text-rose-400 transition-transform duration-200 group-hover:scale-110"></i>
-          <span class="active-dot hidden absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-rose-400 shadow-[0_0_8px_#f43f5e]"></span>
+          <i data-lucide="arrow-up-circle" class="w-5 h-5 transition-transform duration-200 group-hover:scale-110"></i>
         </div>
-        <span class="text-[10px] mt-1.5 tracking-tight">Chiqim</span>
+        <span class="text-[10px] mt-1 tracking-tight font-medium">Chiqim</span>
+        <span class="active-bar hidden w-5 h-1 rounded-full bg-rose-400 shadow-[0_0_8px_#f43f5e] mt-0.5"></span>
       </button>
 
-      <!-- Menyu -->
-      <button onclick="openMobileMoreMenu()" id="btmNav-more" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95">
-        <div class="relative flex items-center justify-center">
-          <i data-lucide="layout-grid" class="w-5 h-5 text-amber-400 transition-transform duration-200 group-hover:scale-110"></i>
-          <span class="active-dot hidden absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+      <!-- Menyu / Ichki Bo'lim -->
+      <button onclick="openMobileMoreMenu()" id="btmNav-more" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 group active:scale-95">
+        <div class="relative flex items-center justify-center" id="btmNavMoreIconContainer">
+          <i id="btmNavMoreIcon" data-lucide="layout-grid" class="w-5 h-5 transition-transform duration-200 group-hover:scale-110"></i>
         </div>
-        <span class="text-[10px] mt-1.5 tracking-tight">Menyu</span>
+        <span id="btmNavMoreLabel" class="text-[10px] mt-1 tracking-tight font-medium">Menyu</span>
+        <span class="active-bar hidden w-5 h-1 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24] mt-0.5"></span>
       </button>
     </nav>
   </div>
@@ -1995,24 +2003,115 @@
       renderAll();
     }
 
-    // ==================== TABS SWITCHING & INSTAGRAM SWIPE ====================
+    // ==================== TABS METADATA & SWITCHING ====================
     const TABS_SEQUENCE = ['dashboard', 'inbound', 'outbound', 'products', 'categories', 'users', 'history', 'settings'];
     let currentActiveTab = 'dashboard';
 
+    const TAB_METADATA = {
+      'dashboard': {
+        name: 'Asosiy Dashboard',
+        short: 'Asosiy',
+        icon: 'layout-dashboard',
+        color: '#10b981',
+        tailwindBg: 'bg-emerald-600',
+        tailwindText: 'text-emerald-400',
+        borderCol: 'border-emerald-500/50',
+        activePill: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+      },
+      'inbound': {
+        name: 'Kirim (Tovar Qabuli)',
+        short: 'Kirim',
+        icon: 'arrow-down-circle',
+        color: '#10b981',
+        tailwindBg: 'bg-emerald-600',
+        tailwindText: 'text-emerald-400',
+        borderCol: 'border-emerald-500/50',
+        activePill: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+      },
+      'outbound': {
+        name: 'Chiqim (Tovar Jo\'natish)',
+        short: 'Chiqim',
+        icon: 'arrow-up-circle',
+        color: '#f43f5e',
+        tailwindBg: 'bg-rose-600',
+        tailwindText: 'text-rose-400',
+        borderCol: 'border-rose-500/50',
+        activePill: 'bg-rose-500/15 border-rose-500/40 text-rose-300'
+      },
+      'products': {
+        name: 'Katalog & QR Kodlar',
+        short: 'Katalog',
+        icon: 'boxes',
+        color: '#6366f1',
+        tailwindBg: 'bg-indigo-600',
+        tailwindText: 'text-indigo-400',
+        borderCol: 'border-indigo-500/50',
+        activePill: 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300'
+      },
+      'categories': {
+        name: 'Tovarlar Kategoriyalari',
+        short: 'Kategoriya',
+        icon: 'tags',
+        color: '#d946ef',
+        tailwindBg: 'bg-fuchsia-600',
+        tailwindText: 'text-fuchsia-400',
+        borderCol: 'border-fuchsia-500/50',
+        activePill: 'bg-fuchsia-500/15 border-fuchsia-500/40 text-fuchsia-300'
+      },
+      'users': {
+        name: 'Xodimlar & Huquqlar',
+        short: 'Xodimlar',
+        icon: 'users',
+        color: '#0ea5e9',
+        tailwindBg: 'bg-sky-600',
+        tailwindText: 'text-sky-400',
+        borderCol: 'border-sky-500/50',
+        activePill: 'bg-sky-500/15 border-sky-500/40 text-sky-300'
+      },
+      'history': {
+        name: 'Audit Jurnali (Tarix)',
+        short: 'Tarix',
+        icon: 'clipboard-list',
+        color: '#f59e0b',
+        tailwindBg: 'bg-amber-600',
+        tailwindText: 'text-amber-400',
+        borderCol: 'border-amber-500/50',
+        activePill: 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+      },
+      'settings': {
+        name: 'Telegram Bot & Sozlamalar',
+        short: 'Sozlamalar',
+        icon: 'settings-2',
+        color: '#a855f7',
+        tailwindBg: 'bg-purple-600',
+        tailwindText: 'text-purple-400',
+        borderCol: 'border-purple-500/50',
+        activePill: 'bg-purple-500/15 border-purple-500/40 text-purple-300'
+      }
+    };
+
     function switchTab(tabName, direction = null) {
       currentActiveTab = tabName;
-      document.querySelectorAll('.tab-content').forEach(el => {
-        el.classList.add('hidden');
-        el.classList.remove('slide-in-right', 'slide-in-left');
-      });
+      const meta = TAB_METADATA[tabName] || TAB_METADATA['dashboard'];
+
+      // 0. Yuqori Navbarda Hozirgi Bo'lim Ko'rsatkichi (Active Section Badge)
+      const secBadge = document.getElementById('activeSectionBadge');
+      const secName = document.getElementById('activeSectionName');
+      const secDot = document.getElementById('activeSectionDot');
+      if (secBadge && secName && secDot) {
+        secName.textContent = meta.name;
+        secDot.style.backgroundColor = meta.color;
+        secDot.style.boxShadow = `0 0 10px ${meta.color}`;
+        secBadge.className = `flex items-center gap-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border transition-all duration-300 shadow-sm shrink-0 ${meta.activePill}`;
+      }
 
       // 1. Desktop Tabs (>= xl)
       document.querySelectorAll('.nav-tab').forEach(el => {
-        el.className = "nav-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap";
+        el.className = "nav-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition flex items-center gap-1.5 whitespace-nowrap";
       });
       const btn = document.getElementById(`tabBtn-${tabName}`);
       if (btn) {
-        btn.className = "nav-tab px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-wb-600 shadow-md transition flex items-center gap-1.5 whitespace-nowrap";
+        btn.className = `nav-tab px-3 py-1.5 rounded-xl text-xs font-bold text-white ${meta.tailwindBg} shadow-lg border border-white/20 transition flex items-center gap-1.5 whitespace-nowrap scale-105`;
       }
 
       // 2. Subnav Tabs (Noutbuk & Planshetlar uchun ixcham icon-nav)
@@ -2021,7 +2120,7 @@
       });
       const subBtn = document.getElementById(`subTabBtn-${tabName}`);
       if (subBtn) {
-        subBtn.className = "subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-bold text-white bg-wb-600 shadow-md transition flex items-center gap-1.5 whitespace-nowrap shrink-0";
+        subBtn.className = `subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-bold text-white ${meta.tailwindBg} shadow-lg border border-white/20 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 scale-105`;
         try {
           subBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         } catch (e) {}
@@ -2030,31 +2129,48 @@
       // 3. Mobile Floating Bottom Nav (< md)
       try { navigator.vibrate?.(10); } catch (e) {}
       const primaryBtmTabs = ['dashboard', 'inbound', 'outbound'];
+
+      // Barcha pastki tugmalarni nofaol qilish
       document.querySelectorAll('.btmnav-tab').forEach(el => {
-        el.className = "btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95";
-        const dot = el.querySelector('.active-dot');
-        if (dot) dot.classList.add('hidden');
+        el.className = "btmnav-tab flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95";
+        const bar = el.querySelector('.active-bar');
+        if (bar) bar.classList.add('hidden');
       });
+
+      // Menyu tugmasining belgisi va yozuvini yangilash
+      const moreIcon = document.getElementById('btmNavMoreIcon');
+      const moreLabel = document.getElementById('btmNavMoreLabel');
 
       let activeBtmId = `btmNav-${tabName}`;
       if (!primaryBtmTabs.includes(tabName)) {
         activeBtmId = 'btmNav-more';
-      }
-      const btmBtn = document.getElementById(activeBtmId);
-      if (btmBtn) {
-        btmBtn.className = "btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-white font-bold scale-105 active:scale-95";
-        const dot = btmBtn.querySelector('.active-dot');
-        if (dot) dot.classList.remove('hidden');
+        if (moreIcon) moreIcon.setAttribute('data-lucide', meta.icon);
+        if (moreLabel) moreLabel.textContent = meta.short;
+      } else {
+        if (moreIcon) moreIcon.setAttribute('data-lucide', 'layout-grid');
+        if (moreLabel) moreLabel.textContent = 'Menyu';
       }
 
+      // Faol tugmani yorqin fon va neon bar bilan ajratib ko'rsatish
+      const btmBtn = document.getElementById(activeBtmId);
+      if (btmBtn) {
+        btmBtn.className = `btmnav-tab flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 group bg-slate-800/90 border ${meta.borderCol} ${meta.tailwindText} font-black scale-105 shadow-[0_0_15px_rgba(255,255,255,0.06)] active:scale-95`;
+        const bar = btmBtn.querySelector('.active-bar');
+        if (bar) {
+          bar.classList.remove('hidden');
+          bar.style.backgroundColor = meta.color;
+          bar.style.boxShadow = `0 0 10px ${meta.color}`;
+        }
+      }
+
+      // 4. Tab kontentini silliq ochish (section-enter animatsiyasi bilan)
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       const target = document.getElementById(`tab-${tabName}`);
       if (target) {
         target.classList.remove('hidden');
-        if (direction === 'left') {
-          target.classList.add('slide-in-right');
-        } else if (direction === 'right') {
-          target.classList.add('slide-in-left');
-        }
+        target.classList.remove('section-enter');
+        void target.offsetWidth; // Force CSS animation reflow
+        target.classList.add('section-enter');
       }
 
       if (tabName === 'dashboard') {
