@@ -296,7 +296,7 @@
       </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 pb-24 md:pb-8">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 pb-32 md:pb-8">
 
       <!-- ==================== 1. PROFESSIONAL EXECUTIVE DASHBOARD ==================== -->
       <section id="tab-dashboard" class="tab-content space-y-6">
@@ -1389,34 +1389,58 @@
     </div>
   </div>
 
-  <!-- ======================== 6. MOBIL PASTKI NAVIGATSIYA (BOTTOM NAV) ======================== -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 px-3 py-1 flex items-center justify-between safe-bottom shadow-2xl">
-    <button onclick="switchTab('dashboard')" id="btmNav-dashboard" class="btmnav-tab flex flex-col items-center justify-center py-1 px-2 rounded-xl text-wb-400 font-bold transition">
-      <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-      <span class="text-[10px] mt-0.5">Asosiy</span>
-    </button>
-    <button onclick="switchTab('inbound')" id="btmNav-inbound" class="btmnav-tab flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition">
-      <i data-lucide="arrow-down-left" class="w-5 h-5 text-emerald-400"></i>
-      <span class="text-[10px] mt-0.5">Kirim</span>
-    </button>
-    
-    <!-- MARKAZDA: KO'TARILGAN DUMALOQ SKANER TUGMASI -->
-    <button onclick="openScannerModal()" class="flex flex-col items-center justify-center -mt-6 group focus:outline-none shrink-0" title="Kamera Skaneri">
-      <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-500 to-emerald-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/50 border-4 border-slate-900 group-hover:scale-105 active:scale-95 transition">
-        <i data-lucide="scan" class="w-6 h-6"></i>
-      </div>
-      <span class="text-[10px] font-bold text-emerald-400 mt-0.5">Skaner</span>
-    </button>
+  <!-- ======================== 6. MOBIL PASTKI NAVIGATSIYA (PREMIUM FLOATING DOCK) ======================== -->
+  <div class="md:hidden fixed bottom-3 left-3 right-3 z-40 max-w-md mx-auto pointer-events-none">
+    <nav class="pointer-events-auto bg-slate-900/95 backdrop-blur-2xl border border-slate-700/60 rounded-3xl px-2 py-1.5 flex items-center justify-between shadow-[0_12px_36px_rgba(0,0,0,0.85),0_0_20px_rgba(99,102,241,0.12)] ring-1 ring-white/10 safe-bottom">
+      
+      <!-- Asosiy (Dashboard) -->
+      <button onclick="switchTab('dashboard')" id="btmNav-dashboard" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-white font-bold active:scale-95">
+        <div class="relative flex items-center justify-center">
+          <i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform duration-200 group-hover:scale-110"></i>
+          <span class="active-dot absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-wb-400 shadow-[0_0_8px_#818cf8]"></span>
+        </div>
+        <span class="text-[10px] mt-1.5 tracking-tight">Asosiy</span>
+      </button>
 
-    <button onclick="switchTab('outbound')" id="btmNav-outbound" class="btmnav-tab flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition">
-      <i data-lucide="arrow-up-right" class="w-5 h-5 text-rose-400"></i>
-      <span class="text-[10px] mt-0.5">Chiqim</span>
-    </button>
-    <button onclick="openMobileMoreMenu()" id="btmNav-more" class="btmnav-tab flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition">
-      <i data-lucide="grid" class="w-5 h-5 text-amber-400"></i>
-      <span class="text-[10px] mt-0.5">Menyu</span>
-    </button>
-  </nav>
+      <!-- Kirim -->
+      <button onclick="switchTab('inbound')" id="btmNav-inbound" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95">
+        <div class="relative flex items-center justify-center">
+          <i data-lucide="arrow-down-circle" class="w-5 h-5 text-emerald-400 transition-transform duration-200 group-hover:scale-110"></i>
+          <span class="active-dot hidden absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+        </div>
+        <span class="text-[10px] mt-1.5 tracking-tight">Kirim</span>
+      </button>
+      
+      <!-- MARKAZIY GLOWING SKANER TUGMASI (HERO FAB) -->
+      <div class="flex-1 flex justify-center -mt-6">
+        <button onclick="openScannerModal()" class="relative flex flex-col items-center justify-center group focus:outline-none active:scale-90 transition-transform duration-200" title="Kamera Skaneri">
+          <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 opacity-70 blur-md group-hover:opacity-100 animate-pulse transition"></div>
+          <div class="relative w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white flex items-center justify-center shadow-xl shadow-emerald-500/50 border-[3.5px] border-slate-950 group-hover:scale-105 transition">
+            <i data-lucide="scan" class="w-6 h-6 drop-shadow"></i>
+          </div>
+          <span class="text-[9px] font-black text-emerald-400 tracking-wider uppercase mt-0.5">Skaner</span>
+        </button>
+      </div>
+
+      <!-- Chiqim -->
+      <button onclick="switchTab('outbound')" id="btmNav-outbound" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95">
+        <div class="relative flex items-center justify-center">
+          <i data-lucide="arrow-up-circle" class="w-5 h-5 text-rose-400 transition-transform duration-200 group-hover:scale-110"></i>
+          <span class="active-dot hidden absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-rose-400 shadow-[0_0_8px_#f43f5e]"></span>
+        </div>
+        <span class="text-[10px] mt-1.5 tracking-tight">Chiqim</span>
+      </button>
+
+      <!-- Menyu -->
+      <button onclick="openMobileMoreMenu()" id="btmNav-more" class="btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95">
+        <div class="relative flex items-center justify-center">
+          <i data-lucide="layout-grid" class="w-5 h-5 text-amber-400 transition-transform duration-200 group-hover:scale-110"></i>
+          <span class="active-dot hidden absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+        </div>
+        <span class="text-[10px] mt-1.5 tracking-tight">Menyu</span>
+      </button>
+    </nav>
+  </div>
 
   <!-- ======================== 7. MOBIL QO'SHIMCHA MENYU (BOTTOM SHEET) ======================== -->
   <div id="mobileMoreModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -1928,13 +1952,24 @@
         } catch (e) {}
       }
 
-      // 3. Mobile Bottom Nav (< md)
+      // 3. Mobile Floating Bottom Nav (< md)
+      try { navigator.vibrate?.(10); } catch (e) {}
+      const primaryBtmTabs = ['dashboard', 'inbound', 'outbound'];
       document.querySelectorAll('.btmnav-tab').forEach(el => {
-        el.className = "btmnav-tab flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition";
+        el.className = "btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-slate-400 hover:text-slate-200 active:scale-95";
+        const dot = el.querySelector('.active-dot');
+        if (dot) dot.classList.add('hidden');
       });
-      const btmBtn = document.getElementById(`btmNav-${tabName}`);
+
+      let activeBtmId = `btmNav-${tabName}`;
+      if (!primaryBtmTabs.includes(tabName)) {
+        activeBtmId = 'btmNav-more';
+      }
+      const btmBtn = document.getElementById(activeBtmId);
       if (btmBtn) {
-        btmBtn.className = "btmnav-tab flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-wb-400 font-bold transition scale-105";
+        btmBtn.className = "btmnav-tab flex-1 flex flex-col items-center justify-center py-1 rounded-2xl transition-all duration-200 group text-white font-bold scale-105 active:scale-95";
+        const dot = btmBtn.querySelector('.active-dot');
+        if (dot) dot.classList.remove('hidden');
       }
 
       const target = document.getElementById(`tab-${tabName}`);
