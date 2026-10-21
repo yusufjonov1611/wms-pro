@@ -382,7 +382,7 @@ app.post('/api/categories', (req, res) => {
 
 app.delete('/api/categories/:id', (req, res) => {
   const { id } = req.params;
-  db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+  db.prepare('DELETE FROM categories WHERE id = ? OR name = ?').run(id, id);
   res.json({ success: true });
 });
 

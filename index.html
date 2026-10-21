@@ -1584,7 +1584,7 @@
 
     // Backend API & Server State
     const API_BASE = (window.location.protocol.startsWith('http')) ? '' : 'http://localhost:3000';
-    let isBackendOnline = false;
+    let isBackendOnline = true;
     let wmsDocuments = [];
     let wmsSettings = {
       company_name: 'Vanguard Logistics & WMS MChJ',
@@ -1595,22 +1595,19 @@
       telegram_alerts_enabled: '1'
     };
 
-    // State
-    let users = JSON.parse(localStorage.getItem('vg_users')) || INITIAL_USERS;
-    let categories = JSON.parse(localStorage.getItem('vg_categories')) || ['Asosiy'];
-    let products = JSON.parse(localStorage.getItem('vg_products')) || [];
-    let logs = JSON.parse(localStorage.getItem('vg_logs')) || [];
+    // State - Barcha ma'lumotlar faqat bitta umumiy markaziy serverdan olinadi
+    let users = INITIAL_USERS;
+    let categories = ['Asosiy'];
+    let products = [];
+    let logs = [];
     let currentUser = JSON.parse(localStorage.getItem('vg_active_user')) || null;
     let autoSkuSequence = Math.floor(1000 + Math.random() * 9000);
     let html5QrScanner = null;
     let flowChartInstance = null;
     let categoryChartInstance = null;
+    let isSyncing = false;
 
     function saveState() {
-      localStorage.setItem('vg_users', JSON.stringify(users));
-      localStorage.setItem('vg_categories', JSON.stringify(categories));
-      localStorage.setItem('vg_products', JSON.stringify(products));
-      localStorage.setItem('vg_logs', JSON.stringify(logs));
       if (currentUser) {
         localStorage.setItem('vg_active_user', JSON.stringify(currentUser));
       } else {
@@ -1663,7 +1660,7 @@
       return (result.charAt(0).toUpperCase() + result.slice(1)) + " so'm 00 tiyin";
     }
 
-    // ==================== SERVER STATUS & API DATA ====================
+    // ==================== SERVER STATUS & UMUMIY BAZA SINXRONI ====================
 
     function updateServerStatusUI(online, botConnected = false, botUsername = null) {
       isBackendOnline = online;
@@ -1672,12 +1669,12 @@
       if (dot && text) {
         if (online) {
           dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-          text.className = "text-emerald-400 font-bold";
-          text.textContent = "SQLite Online";
+          text.className = "hidden 2xl:inline text-emerald-400 font-bold";
+          text.textContent = "Umumiy Baza (Onlayn)";
         } else {
-          dot.className = "w-2 h-2 rounded-full bg-amber-400";
-          text.className = "text-amber-400 font-bold";
-          text.textContent = "Offline (Lokal)";
+          dot.className = "w-2 h-2 rounded-full bg-rose-500 animate-ping";
+          text.className = "hidden 2xl:inline text-rose-400 font-bold";
+          text.textContent = "Server uzilgan";
         }
       }
 
@@ -1696,7 +1693,9 @@
       }
     }
 
-    async function fetchInitData() {
+    async function fetchInitData(isSilent = false) {
+      if (isSyncing) return;
+      isSyncing = true;
       try {
         const statusRes = await fetch(`${API_BASE}/api/status`);
         if (statusRes.ok) {
@@ -1716,7 +1715,7 @@
           if (cRes.ok) {
             const dbCats = await cRes.json();
             if (dbCats && dbCats.length) {
-              categories = dbCats.map(c => c.name);
+              categories = dbCats.map(c => ({ id: c.id, name: c.name, desc: c.description || '—' }));
             }
           }
           if (pRes.ok) products = await pRes.json();
@@ -1724,22 +1723,25 @@
           if (dRes.ok) wmsDocuments = await dRes.json();
           if (sRes.ok) {
             wmsSettings = { ...wmsSettings, ...(await sRes.json()) };
-            populateSettingsInputs();
+            if (!isSilent) populateSettingsInputs();
           }
 
-          localStorage.setItem('vg_users', JSON.stringify(users));
-          localStorage.setItem('vg_categories', JSON.stringify(categories));
-          localStorage.setItem('vg_products', JSON.stringify(products));
-          localStorage.setItem('vg_logs', JSON.stringify(logs));
+          renderAll();
         } else {
           updateServerStatusUI(false);
         }
       } catch (err) {
-        console.warn("Backend serverga ulanish imkoni bo'lmadi. Mahalliy xotira (localStorage) faollashdi:", err.message);
+        if (!isSilent) console.warn("Umumiy serverga ulanish xatosi:", err.message);
         updateServerStatusUI(false);
+      } finally {
+        isSyncing = false;
       }
-      renderAll();
     }
+
+    // Real-vaqt umumiy xotira sinxronizatsiyasi: har 2 soniyada barcha telefon va kompyuterlar bir xil bazadan yangilanadi
+    setInterval(() => {
+      fetchInitData(true);
+    }, 2000);
 
     // ==================== AVTO-SKU VA SHTRIX-KOD ====================
 
@@ -1782,27 +1784,25 @@
       const p = document.getElementById('loginPassword').value.trim();
       const errEl = document.getElementById('loginError');
 
-      if (isBackendOnline) {
-        try {
-          const res = await fetch(`${API_BASE}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: u, password: p })
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            errEl.textContent = data.error || "Login yoki parol noto'g'ri!";
-            errEl.classList.remove('hidden');
-            return;
-          }
-          currentUser = data.user;
-          saveState();
-          initUserSession();
-          await fetchInitData();
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errEl.textContent = data.error || "Login yoki parol noto'g'ri!";
+          errEl.classList.remove('hidden');
           return;
-        } catch (err) {
-          console.warn("Backend auth failed, trying offline:", err);
         }
+        currentUser = data.user;
+        saveState();
+        initUserSession();
+        await fetchInitData();
+        return;
+      } catch (err) {
+        console.warn("Backend login ulanish xatosi:", err);
       }
 
       const found = users.find(user => user.username.toLowerCase() === u.toLowerCase() && user.password === p);
@@ -2146,51 +2146,45 @@
         return;
       }
 
-      if (isBackendOnline) {
-        try {
-          await fetch(`${API_BASE}/api/categories`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: catName, description: catDesc })
-          });
-          document.getElementById('categoryForm').reset();
-          await fetchInitData();
+      try {
+        const res = await fetch(`${API_BASE}/api/categories`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: catName, description: catDesc })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert("Xatolik: " + err.error);
           return;
-        } catch (e) {
-          console.error("Backend category error:", e);
         }
+        document.getElementById('categoryForm').reset();
+        await fetchInitData();
+        return;
+      } catch (e) {
+        console.error("Backend category error:", e);
+        alert("Server bilan aloqa xatosi! Kategoriya saqlanmadi.");
       }
-
-      categories.push({
-        id: 'cat-' + Date.now(),
-        name: catName,
-        desc: catDesc || '—'
-      });
-
-      document.getElementById('categoryForm').reset();
-      saveState();
     }
 
-    function quickCreateCategoryPrompt() {
+    async function quickCreateCategoryPrompt() {
       const name = prompt("Yangi Kategoriya nomini kiriting:");
       if (name && name.trim()) {
         const cleanName = name.trim();
         const exists = categories.some(c => (typeof c === 'string' ? c : c.name).toLowerCase() === cleanName.toLowerCase());
         if (!exists) {
-          if (isBackendOnline) {
-            fetch(`${API_BASE}/api/categories`, {
+          try {
+            await fetch(`${API_BASE}/api/categories`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name: cleanName, description: 'Tezkor kiritilgan' })
-            }).then(() => fetchInitData());
+            });
+            await fetchInitData();
+          } catch (e) {
+            console.error(e);
           }
-          categories.push({ id: 'cat-' + Date.now(), name: cleanName, desc: 'Tezkor kiritilgan' });
-          saveState();
-          document.getElementById('prodCategory').value = cleanName;
-          triggerAutoSku();
-        } else {
-          document.getElementById('prodCategory').value = cleanName;
         }
+        document.getElementById('prodCategory').value = cleanName;
+        triggerAutoSku();
       }
     }
 
@@ -2202,18 +2196,21 @@
       }
 
       if (confirm(`Rostdan ham "${catName}" kategoriyasini o'chirmoqchimisiz?`)) {
-        if (isBackendOnline) {
-          try {
-            const dbCat = categories.find(c => (typeof c === 'string' ? c : c.name).toLowerCase() === catName.toLowerCase());
-            if (dbCat && dbCat.id) {
-              await fetch(`${API_BASE}/api/categories/${dbCat.id}`, { method: 'DELETE' });
-              await fetchInitData();
-              return;
-            }
-          } catch (e) {}
+        try {
+          const dbCat = categories.find(c => (typeof c === 'string' ? c : c.name).toLowerCase() === catName.toLowerCase());
+          const catId = dbCat?.id || catName;
+          const res = await fetch(`${API_BASE}/api/categories/${encodeURIComponent(catId)}`, { method: 'DELETE' });
+          if (!res.ok) {
+            const err = await res.json();
+            alert("Xatolik: " + err.error);
+            return;
+          }
+          await fetchInitData();
+          return;
+        } catch (e) {
+          console.error("Delete category error:", e);
+          alert("Server bilan aloqa xatosi! Kategoriya o'chirilmadi.");
         }
-        categories = categories.filter(c => (typeof c === 'string' ? c : c.name).toLowerCase() !== catName.toLowerCase());
-        saveState();
       }
     }
 
@@ -2597,109 +2594,63 @@
         return;
       }
 
-      // 1. Agar backend online bo'lsa - REST API orqali amalga oshirish
-      if (isBackendOnline) {
-        try {
-          const res = await fetch(`${API_BASE}/api/operations`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'IN',
-              items: [{
-                productId: p.id,
-                qty: qty,
-                price: p.price
-              }],
-              partner: supplier,
-              docNo: docNo,
-              note: note || 'Kirim qabul qilindi',
-              userName: currentUser ? currentUser.fullName : 'Xodim'
-            })
-          });
-
-          if (!res.ok) {
-            const errData = await res.json();
-            alert("Xatolik: " + (errData.error || "Operatsiyani bajarib bo'lmadi"));
-            return;
-          }
-
-          const opResult = await res.json();
-          document.getElementById('inboundForm').reset();
-          document.getElementById('inboundProdSnippet').classList.add('hidden');
-
-          // Ma'lumotlarni bazadan qayta yangilash
-          await fetchInitData();
-
-          // A4 Nakladnoyni ochish
-          openNakladnaya({
-            docNo: opResult.docNo || docNo,
+      // Markaziy serverga yuborish (Barcha qurilmalar uchun yagona umumiy baza)
+      try {
+        const res = await fetch(`${API_BASE}/api/operations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             type: 'IN',
-            date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-            partner: supplier,
-            responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
-            note: note || 'Kirim qabul qilindi',
-            items: opResult.items || [{
-              name: p.name,
-              sku: p.sku,
-              barcode: p.barcode,
-              unit: p.unit || 'dona',
+            items: [{
+              productId: p.id,
               qty: qty,
-              price: p.price,
-              total: qty * p.price
+              price: p.price
             }],
-            totalQty: opResult.totalQty || qty,
-            totalSum: opResult.totalSum || (qty * p.price)
-          });
+            partner: supplier,
+            docNo: docNo,
+            note: note || 'Kirim qabul qilindi',
+            userName: currentUser ? currentUser.fullName : 'Xodim'
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          alert("Xatolik: " + (errData.error || "Operatsiyani bajarib bo'lmadi"));
           return;
-        } catch (err) {
-          console.error("Backend error, falling back locally:", err);
         }
+
+        const opResult = await res.json();
+        document.getElementById('inboundForm').reset();
+        document.getElementById('inboundProdSnippet').classList.add('hidden');
+
+        // Ma'lumotlarni markaziy bazadan barcha qurilmalar uchun yangilash
+        await fetchInitData();
+
+        // A4 Nakladnoyni ochish
+        openNakladnaya({
+          docNo: opResult.docNo || docNo,
+          type: 'IN',
+          date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          partner: supplier,
+          responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
+          note: note || 'Kirim qabul qilindi',
+          items: opResult.items || [{
+            name: p.name,
+            sku: p.sku,
+            barcode: p.barcode,
+            unit: p.unit || 'dona',
+            qty: qty,
+            price: p.price,
+            total: qty * p.price
+          }],
+          totalQty: opResult.totalQty || qty,
+          totalSum: opResult.totalSum || (qty * p.price)
+        });
+        return;
+      } catch (err) {
+        console.error("Markaziy server xatosi:", err);
+        alert("Markaziy server bilan bog'lanishda xatolik yuz berdi! Iltimos, qayta urinib ko'ring.");
       }
-
-      // 2. Mahalliy xotira (Fallback)
-      p.quantity = Number(p.quantity) + qty;
-      const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-      const newLog = {
-        id: 'log-' + Date.now(),
-        date: dateStr,
-        user: currentUser ? currentUser.fullName : 'Xodim',
-        sku: p.sku,
-        productName: p.name,
-        type: 'IN',
-        qty: qty,
-        partner: supplier,
-        docNo: docNo,
-        note: note || 'Kirim qabul qilindi',
-        unit: p.unit || 'dona',
-        price: p.price,
-        totalPrice: qty * p.price
-      };
-
-      logs.unshift(newLog);
-      saveState();
-
-      document.getElementById('inboundForm').reset();
-      document.getElementById('inboundProdSnippet').classList.add('hidden');
-
-      openNakladnaya({
-        docNo: docNo,
-        type: 'IN',
-        date: dateStr,
-        partner: supplier,
-        responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
-        note: note || 'Kirim qabul qilindi',
-        items: [{
-          name: p.name,
-          sku: p.sku,
-          barcode: p.barcode,
-          unit: p.unit || 'dona',
-          qty: qty,
-          price: p.price,
-          total: qty * p.price
-        }],
-        totalQty: qty,
-        totalSum: qty * p.price
-      });
     }
 
     function renderInboundSection() {
@@ -2776,108 +2727,62 @@
         return;
       }
 
-      // 1. Agar backend online bo'lsa
-      if (isBackendOnline) {
-        try {
-          const res = await fetch(`${API_BASE}/api/operations`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'OUT',
-              items: [{
-                productId: p.id,
-                qty: qty,
-                sellPrice: p.sellPrice || p.price
-              }],
-              partner: customer,
-              docNo: docNo,
-              note: note || 'Chiqim jo\'natildi',
-              userName: currentUser ? currentUser.fullName : 'Xodim'
-            })
-          });
-
-          if (!res.ok) {
-            const errData = await res.json();
-            alert("Xatolik: " + (errData.error || "Operatsiyani bajarib bo'lmadi"));
-            return;
-          }
-
-          const opResult = await res.json();
-          document.getElementById('outboundForm').reset();
-          document.getElementById('outboundProdSnippet').classList.add('hidden');
-
-          await fetchInitData();
-
-          openNakladnaya({
-            docNo: opResult.docNo || docNo,
+      // Markaziy serverga yuborish (Barcha qurilmalar uchun yagona umumiy baza)
+      try {
+        const res = await fetch(`${API_BASE}/api/operations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             type: 'OUT',
-            date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-            partner: customer,
-            responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
-            note: note || 'Chiqim jo\'natildi',
-            items: opResult.items || [{
-              name: p.name,
-              sku: p.sku,
-              barcode: p.barcode,
-              unit: p.unit || 'dona',
+            items: [{
+              productId: p.id,
               qty: qty,
-              price: p.sellPrice || p.price,
-              total: qty * (p.sellPrice || p.price)
+              sellPrice: p.sellPrice || p.price
             }],
-            totalQty: opResult.totalQty || qty,
-            totalSum: opResult.totalSum || (qty * (p.sellPrice || p.price))
-          });
+            partner: customer,
+            docNo: docNo,
+            note: note || 'Chiqim jo\'natildi',
+            userName: currentUser ? currentUser.fullName : 'Xodim'
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          alert("Xatolik: " + (errData.error || "Operatsiyani bajarib bo'lmadi"));
           return;
-        } catch (err) {
-          console.error("Backend error, falling back locally:", err);
         }
+
+        const opResult = await res.json();
+        document.getElementById('outboundForm').reset();
+        document.getElementById('outboundProdSnippet').classList.add('hidden');
+
+        // Barcha qurilmalar uchun bazadan qayta yangilash
+        await fetchInitData();
+
+        openNakladnaya({
+          docNo: opResult.docNo || docNo,
+          type: 'OUT',
+          date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          partner: customer,
+          responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
+          note: note || 'Chiqim jo\'natildi',
+          items: opResult.items || [{
+            name: p.name,
+            sku: p.sku,
+            barcode: p.barcode,
+            unit: p.unit || 'dona',
+            qty: qty,
+            price: p.sellPrice || p.price,
+            total: qty * (p.sellPrice || p.price)
+          }],
+          totalQty: opResult.totalQty || qty,
+          totalSum: opResult.totalSum || (qty * (p.sellPrice || p.price))
+        });
+        return;
+      } catch (err) {
+        console.error("Markaziy server chiqim xatosi:", err);
+        alert("Markaziy server bilan bog'lanishda xatolik yuz berdi! Iltimos, qayta urinib ko'ring.");
       }
-
-      // 2. Mahalliy xotira (Fallback)
-      p.quantity = Number(p.quantity) - qty;
-      const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-      const itemPrice = p.sellPrice || p.price;
-      const newLog = {
-        id: 'log-' + Date.now(),
-        date: dateStr,
-        user: currentUser ? currentUser.fullName : 'Xodim',
-        sku: p.sku,
-        productName: p.name,
-        type: 'OUT',
-        qty: qty,
-        partner: customer,
-        docNo: docNo,
-        note: note || 'Chiqim jo\'natildi',
-        unit: p.unit || 'dona',
-        price: itemPrice,
-        totalPrice: qty * itemPrice
-      };
-
-      logs.unshift(newLog);
-      saveState();
-
-      document.getElementById('outboundForm').reset();
-      document.getElementById('outboundProdSnippet').classList.add('hidden');
-
-      openNakladnaya({
-        docNo: docNo,
-        type: 'OUT',
-        date: dateStr,
-        partner: customer,
-        responsibleUser: currentUser ? currentUser.fullName : 'Xodim',
-        note: note || 'Chiqim jo\'natildi',
-        items: [{
-          name: p.name,
-          sku: p.sku,
-          barcode: p.barcode,
-          unit: p.unit || 'dona',
-          qty: qty,
-          price: itemPrice,
-          total: qty * itemPrice
-        }],
-        totalQty: qty,
-        totalSum: qty * itemPrice
-      });
     }
 
     function renderOutboundSection() {
@@ -3134,82 +3039,40 @@
         return;
       }
 
-      if (isBackendOnline) {
-        try {
-          if (id) {
-            const res = await fetch(`${API_BASE}/api/products/${id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location })
-            });
-            if (!res.ok) {
-              const err = await res.json();
-              alert("Xatolik: " + err.error);
-              return;
-            }
-          } else {
-            const res = await fetch(`${API_BASE}/api/products`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location })
-            });
-            if (!res.ok) {
-              const err = await res.json();
-              alert("Xatolik: " + err.error);
-              return;
-            }
-            const data = await res.json();
-            id = data.id;
+      // Markaziy serverga yuborish (Barcha qurilmalar uchun umumiy xotira)
+      try {
+        if (id) {
+          const res = await fetch(`${API_BASE}/api/products/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location })
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert("Xatolik: " + err.error);
+            return;
           }
-          await fetchInitData();
-          closeProductModal();
-          showStickerLabel(id);
-          return;
-        } catch (err) {
-          console.error("Backend product error:", err);
+        } else {
+          const res = await fetch(`${API_BASE}/api/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location })
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert("Xatolik: " + err.error);
+            return;
+          }
+          const data = await res.json();
+          id = data.id;
         }
-      }
-
-      let targetProduct = null;
-      if (id) {
-        const idx = products.findIndex(p => p.id === id);
-        if (idx !== -1) {
-          products[idx] = {
-            ...products[idx],
-            barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location
-          };
-          targetProduct = products[idx];
-        }
-      } else {
-        targetProduct = {
-          id: 'prod-' + Date.now(),
-          barcode, sku, name, category, unit, price, sellPrice, quantity, minStock, expiryDate, location,
-          createdAt: new Date().toISOString().split('T')[0]
-        };
-        products.unshift(targetProduct);
-
-        logs.unshift({
-          id: 'log-' + Date.now(),
-          date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          user: currentUser ? currentUser.fullName : 'Tizim',
-          sku: sku,
-          productName: name,
-          type: 'IN',
-          qty: quantity,
-          partner: 'Boshlang\'ich qabul',
-          docNo: `KIR-${Date.now().toString().slice(-4)}`,
-          note: "Bazada yangi mahsulot yaratildi",
-          unit: unit || 'dona',
-          price: price,
-          totalPrice: quantity * price
-        });
-      }
-
-      saveState();
-      closeProductModal();
-
-      if (targetProduct) {
-        showStickerLabel(targetProduct.id);
+        await fetchInitData();
+        closeProductModal();
+        showStickerLabel(id);
+        return;
+      } catch (err) {
+        console.error("Markaziy server mahsulot xatosi:", err);
+        alert("Markaziy server bilan bog'lanishda xatolik yuz berdi! Mahsulot saqlanmadi.");
       }
     }
 
@@ -3240,17 +3103,19 @@
       if (!p) return;
 
       if (confirm(`Rostdan ham "${p.name}" (${p.sku}) mahsulotini o'chirmoqchimisiz?`)) {
-        if (isBackendOnline) {
-          try {
-            await fetch(`${API_BASE}/api/products/${id}`, { method: 'DELETE' });
-            await fetchInitData();
+        try {
+          const res = await fetch(`${API_BASE}/api/products/${id}`, { method: 'DELETE' });
+          if (!res.ok) {
+            const err = await res.json();
+            alert("Xatolik: " + err.error);
             return;
-          } catch (e) {
-            console.error("Backend delete product error:", e);
           }
+          await fetchInitData();
+          return;
+        } catch (e) {
+          console.error("Backend delete product error:", e);
+          alert("Server bilan aloqa xatosi! Mahsulot o'chirilmadi.");
         }
-        products = products.filter(prod => prod.id !== id);
-        saveState();
       }
     }
 
@@ -3333,48 +3198,38 @@
         return;
       }
 
-      if (isBackendOnline) {
-        try {
-          if (id) {
-            await fetch(`${API_BASE}/api/users/${id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fullName, username, password, role, status, warehouse })
-            });
-          } else {
-            await fetch(`${API_BASE}/api/users`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fullName, username, password, role, status, warehouse })
-            });
+      try {
+        if (id) {
+          const res = await fetch(`${API_BASE}/api/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fullName, username, password, role, status, warehouse })
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert("Xatolik: " + err.error);
+            return;
           }
-          await fetchInitData();
-          closeUserModal();
-          initUserSession();
-          return;
-        } catch (err) {
-          console.error("Backend user submit error:", err);
-        }
-      }
-
-      if (id) {
-        const idx = users.findIndex(u => u.id === id);
-        if (idx !== -1) {
-          users[idx] = { ...users[idx], fullName, username, password, role, status, warehouse };
-          if (currentUser && currentUser.id === id) {
-            currentUser = users[idx];
+        } else {
+          const res = await fetch(`${API_BASE}/api/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fullName, username, password, role, status, warehouse })
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert("Xatolik: " + err.error);
+            return;
           }
         }
-      } else {
-        users.push({
-          id: 'usr-' + Date.now(),
-          fullName, username, password, role, status, warehouse
-        });
+        await fetchInitData();
+        closeUserModal();
+        initUserSession();
+        return;
+      } catch (err) {
+        console.error("Backend user submit error:", err);
+        alert("Server bilan aloqa xatosi! Foydalanuvchi saqlanmadi.");
       }
-
-      saveState();
-      closeUserModal();
-      initUserSession();
     }
 
     function editUser(id) {
@@ -3401,15 +3256,19 @@
       }
 
       if (confirm(`Rostdan ham "${u.fullName}" (${u.username}) hisobini o'chirmoqchimisiz?`)) {
-        if (isBackendOnline) {
-          try {
-            await fetch(`${API_BASE}/api/users/${id}`, { method: 'DELETE' });
-            await fetchInitData();
+        try {
+          const res = await fetch(`${API_BASE}/api/users/${id}`, { method: 'DELETE' });
+          if (!res.ok) {
+            const err = await res.json();
+            alert("Xatolik: " + err.error);
             return;
-          } catch (e) {}
+          }
+          await fetchInitData();
+          return;
+        } catch (e) {
+          console.error("Delete user error:", e);
+          alert("Server bilan aloqa xatosi! Foydalanuvchi o'chirilmadi.");
         }
-        users = users.filter(usr => usr.id !== id);
-        saveState();
       }
     }
 
@@ -3526,10 +3385,21 @@
       });
     }
 
-    function clearHistoryLogs() {
+    async function clearHistoryLogs() {
       if (confirm("Rostdan ham butun tarixni o'chirmoqchimisiz?")) {
-        logs = [];
-        saveState();
+        try {
+          const res = await fetch(`${API_BASE}/api/logs`, { method: 'DELETE' });
+          if (!res.ok) {
+            const err = await res.json();
+            alert("Xatolik: " + err.error);
+            return;
+          }
+          await fetchInitData();
+          return;
+        } catch (e) {
+          console.error("Clear logs error:", e);
+          alert("Server bilan aloqa xatosi! Tarix tozalanmadi.");
+        }
       }
     }
 
@@ -3606,25 +3476,21 @@
       wmsSettings.telegram_chat_id = chatId;
       wmsSettings.telegram_alerts_enabled = alertsEnabled;
 
-      if (isBackendOnline) {
-        try {
-          const res = await fetch(`${API_BASE}/api/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              telegram_bot_token: botToken,
-              telegram_chat_id: chatId,
-              telegram_alerts_enabled: alertsEnabled
-            })
-          });
-          const data = await res.json();
-          updateServerStatusUI(true, data.botConnected, data.botUsername);
-          alert("Telegram Bot sozlamalari muvaffaqiyatli saqlandi!");
-        } catch (err) {
-          alert("Xatolik: " + err.message);
-        }
-      } else {
-        alert("Sozlamalar saqlandi. Bot to'liq ishlashi uchun backend serverni 'npm start' orqali yoqing.");
+      try {
+        const res = await fetch(`${API_BASE}/api/settings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            telegram_bot_token: botToken,
+            telegram_chat_id: chatId,
+            telegram_alerts_enabled: alertsEnabled
+          })
+        });
+        const data = await res.json();
+        updateServerStatusUI(true, data.botConnected, data.botUsername);
+        alert("Telegram Bot sozlamalari umumiy markaziy serverga muvaffaqiyatli saqlandi!");
+      } catch (err) {
+        alert("Xatolik: " + err.message);
       }
     }
 
@@ -3638,23 +3504,19 @@
       wmsSettings.company_phone = phone;
       wmsSettings.company_address = address;
 
-      if (isBackendOnline) {
-        try {
-          await fetch(`${API_BASE}/api/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              company_name: name,
-              company_phone: phone,
-              company_address: address
-            })
-          });
-          alert("Korxona rekvizitlari muvaffaqiyatli saqlandi! A4 nakladnoylarda avtomatik aks etadi.");
-        } catch (err) {
-          alert("Xatolik: " + err.message);
-        }
-      } else {
-        alert("Rekvizitlar saqlandi.");
+      try {
+        await fetch(`${API_BASE}/api/settings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: name,
+            company_phone: phone,
+            company_address: address
+          })
+        });
+        alert("Korxona rekvizitlari muvaffaqiyatli umumiy markaziy serverga saqlandi!");
+      } catch (err) {
+        alert("Xatolik: " + err.message);
       }
     }
 
