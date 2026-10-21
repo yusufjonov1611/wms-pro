@@ -1862,13 +1862,75 @@
       initUserSession();
     }
 
-    function handleLogout() {
-      if (confirm("Rostdan ham tizimdan chiqmoqchimisiz?")) {
+    // ==================== 15 DAQIQA HARAKATSIZLIK (INACTIVITY AUTO-LOGOUT) ====================
+    const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 daqiqa
+    let lastActivityTimestamp = Date.now();
+    let activityThrottled = false;
+
+    function recordUserActivity() {
+      if (!currentUser) return;
+      const now = Date.now();
+      lastActivityTimestamp = now;
+
+      if (!activityThrottled) {
+        activityThrottled = true;
+        try {
+          localStorage.setItem('vg_last_activity', now.toString());
+        } catch (e) {}
+        setTimeout(() => { activityThrottled = false; }, 5000);
+      }
+    }
+
+    function checkInactivityTimeout() {
+      if (!currentUser) return;
+      const now = Date.now();
+      const storedLast = Number(localStorage.getItem('vg_last_activity') || lastActivityTimestamp);
+      const elapsed = now - storedLast;
+
+      if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+        console.warn("Foydalanuvchi 15 daqiqa harakatsiz bo'lganligi tufayli tizimdan chiqarildi.");
+        handleLogout(true, "⚠️ 15 daqiqa harakatsizlik tufayli xavfsizlik maqsadida profilingiz yopildi. Iltimos, qayta kiring.");
+      }
+    }
+
+    ['mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(evt => {
+      window.addEventListener(evt, recordUserActivity, { passive: true });
+    });
+
+    setInterval(checkInactivityTimeout, 10000);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkInactivityTimeout();
+      }
+    });
+    window.addEventListener('focus', checkInactivityTimeout);
+
+    function handleLogout(skipConfirm = false, reason = '') {
+      if (skipConfirm || confirm("Rostdan ham tizimdan chiqmoqchimisiz?")) {
         currentUser = null;
         localStorage.removeItem('vg_active_user');
+        localStorage.removeItem('vg_last_activity');
+
+        // Barcha ochiq modal va panellarni yopish
+        document.querySelectorAll('#scannerModal, #nakladnayaModal, #productModal, #userModal, #mobileMoreModal, #hwScanResultModal').forEach(el => {
+          el.classList.add('hidden');
+        });
+
         document.getElementById('appContainer').classList.add('hidden');
         document.getElementById('loginScreen').classList.remove('hidden');
         document.getElementById('loginPassword').value = '';
+
+        const errEl = document.getElementById('loginError');
+        if (errEl) {
+          if (reason) {
+            errEl.textContent = reason;
+            errEl.className = "text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl py-2 px-3 text-center block mt-2 font-semibold";
+          } else {
+            errEl.classList.add('hidden');
+            errEl.className = "text-xs text-rose-400 font-medium text-center hidden py-1";
+          }
+        }
       }
     }
 
@@ -1878,6 +1940,19 @@
         document.getElementById('loginScreen').classList.remove('hidden');
         return;
       }
+
+      // Agar avvalgi faoliyatdan 15 daqiqa o'tib ketgan bo'lsa darhol login sahifasiga chiqarish
+      const storedLast = Number(localStorage.getItem('vg_last_activity') || 0);
+      if (storedLast > 0 && Date.now() - storedLast >= INACTIVITY_TIMEOUT_MS) {
+        handleLogout(true, "⚠️ 15 daqiqa harakatsizlik tufayli xavfsizlik maqsadida profilingiz yopildi. Qayta kiring.");
+        return;
+      }
+
+      // Sessiyani yangilash
+      lastActivityTimestamp = Date.now();
+      try {
+        localStorage.setItem('vg_last_activity', lastActivityTimestamp.toString());
+      } catch (e) {}
 
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('appContainer').classList.remove('hidden');
