@@ -100,6 +100,20 @@
     .safe-bottom {
       padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
     }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .slide-in-right {
+      animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .slide-in-left {
+      animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200 antialiased selection:bg-wb-500 selection:text-white overflow-x-hidden">
@@ -1882,10 +1896,16 @@
       renderAll();
     }
 
-    // ==================== TABS SWITCHING ====================
+    // ==================== TABS SWITCHING & INSTAGRAM SWIPE ====================
+    const TABS_SEQUENCE = ['dashboard', 'inbound', 'outbound', 'products', 'categories', 'users', 'history', 'settings'];
+    let currentActiveTab = 'dashboard';
 
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    function switchTab(tabName, direction = null) {
+      currentActiveTab = tabName;
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('slide-in-right', 'slide-in-left');
+      });
 
       // 1. Desktop Tabs (>= xl)
       document.querySelectorAll('.nav-tab').forEach(el => {
@@ -1918,7 +1938,14 @@
       }
 
       const target = document.getElementById(`tab-${tabName}`);
-      if (target) target.classList.remove('hidden');
+      if (target) {
+        target.classList.remove('hidden');
+        if (direction === 'left') {
+          target.classList.add('slide-in-right');
+        } else if (direction === 'right') {
+          target.classList.add('slide-in-left');
+        }
+      }
 
       if (tabName === 'dashboard') {
         renderCharts();
@@ -1929,6 +1956,50 @@
 
       lucide.createIcons();
     }
+
+    // ==================== INSTAGRAM USLUBIDA MOBIL SURISH (SWIPE GESTURE) ====================
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    document.addEventListener('touchstart', (e) => {
+      // Modallar, jadvallar, inputlar yoki skaner ochilganda surishni to'xtatish
+      if (e.target.closest('input, textarea, select, .custom-scrollbar, #scannerModal, #nakladnayaModal, #productModal, #userModal, #mobileMoreModal, table, canvas')) {
+        touchStartX = 0;
+        return;
+      }
+      touchStartX = e.changedTouches[0].clientX;
+      touchStartY = e.changedTouches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      if (!touchStartX) return;
+      
+      const anyOpenModal = document.querySelector('#scannerModal:not(.hidden), #nakladnayaModal:not(.hidden), #productModal:not(.hidden), #userModal:not(.hidden), #mobileMoreModal:not(.hidden)');
+      if (anyOpenModal) {
+        touchStartX = 0;
+        return;
+      }
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffX = touchEndX - touchStartX;
+      const diffY = touchEndY - touchStartY;
+
+      // Gorizontal surish kamida 45px va vertikal siljishdan 1.4 barobar ko'proq bo'lishi kerak
+      if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
+        const curIdx = TABS_SEQUENCE.indexOf(currentActiveTab);
+        if (curIdx !== -1) {
+          if (diffX < 0 && curIdx < TABS_SEQUENCE.length - 1) {
+            // O'ngdan chapga surildi -> Keyingi tabga o'tish
+            switchTab(TABS_SEQUENCE[curIdx + 1], 'left');
+          } else if (diffX > 0 && curIdx > 0) {
+            // Chapdan o'ngga surildi -> Oldingi tabga qaytish
+            switchTab(TABS_SEQUENCE[curIdx - 1], 'right');
+          }
+        }
+      }
+      touchStartX = 0;
+    }, { passive: true });
 
     function openMobileMoreMenu() {
       const modal = document.getElementById('mobileMoreModal');
