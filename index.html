@@ -183,48 +183,31 @@
           </div>
         </div>
 
-        <!-- Hozirgi Faol Bo'lim (Har qanday ekranda aniq ko'rsatib turadi) -->
-        <div id="activeSectionBadge" class="flex items-center gap-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-slate-950/80 border border-emerald-500/40 shadow-sm shrink-0">
-          <span id="activeSectionDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></span>
-          <div class="leading-tight">
-            <span class="text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-widest block font-bold leading-none">Bo'lim</span>
-            <span id="activeSectionName" class="text-xs sm:text-xs font-black text-white tracking-tight">Asosiy Dashboard</span>
-          </div>
-        </div>
-
-        <!-- Center: Desktop Navigation Tabs (>= 1280px / xl) -->
-        <nav class="hidden xl:flex items-center gap-0.5 2xl:gap-1 bg-slate-950/80 p-1 rounded-2xl border border-slate-800 shrink-0">
-          <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-bold text-white bg-wb-600 shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
-            <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 shrink-0"></i>
-            <span>Dashboard</span>
+        <!-- Center: Desktop / Tablet Navigation (Ixcham Ikonkalar) -->
+        <nav class="hidden md:flex items-center gap-1 bg-slate-950/80 p-1 rounded-2xl border border-slate-800 shrink-0">
+          <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" title="Dashboard" class="nav-tab p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition flex items-center justify-center">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
           </button>
-          <button onclick="switchTab('inbound')" id="tabBtn-inbound" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
-            <i data-lucide="arrow-down-left" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
-            <span>Kirim</span>
+          <button onclick="switchTab('inbound')" id="tabBtn-inbound" title="Kirim Bo'limi" class="nav-tab p-2 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-slate-800/60 transition flex items-center justify-center">
+            <i data-lucide="arrow-down-left" class="w-4 h-4 text-emerald-400"></i>
           </button>
-          <button onclick="switchTab('outbound')" id="tabBtn-outbound" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
-            <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-rose-400 shrink-0"></i>
-            <span>Chiqim</span>
+          <button onclick="switchTab('outbound')" id="tabBtn-outbound" title="Chiqim Bo'limi" class="nav-tab p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800/60 transition flex items-center justify-center">
+            <i data-lucide="arrow-up-right" class="w-4 h-4 text-rose-400"></i>
           </button>
-          <button onclick="switchTab('products')" id="tabBtn-products" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
-            <i data-lucide="boxes" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
-            <span>Katalog</span>
+          <button onclick="switchTab('products')" id="tabBtn-products" title="Katalog & QR" class="nav-tab p-2 rounded-xl text-slate-400 hover:text-indigo-400 hover:bg-slate-800/60 transition flex items-center justify-center">
+            <i data-lucide="boxes" class="w-4 h-4 text-indigo-400"></i>
           </button>
-          <button onclick="switchTab('categories')" id="tabBtn-categories" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
-            <i data-lucide="tags" class="w-3.5 h-3.5 text-fuchsia-400 shrink-0"></i>
-            <span>Kategoriyalar</span>
+          <button onclick="switchTab('categories')" id="tabBtn-categories" title="Kategoriyalar" class="nav-tab p-2 rounded-xl text-slate-400 hover:text-fuchsia-400 hover:bg-slate-800/60 transition flex items-center justify-center">
+            <i data-lucide="tags" class="w-4 h-4 text-fuchsia-400"></i>
           </button>
-          <button onclick="switchTab('users')" id="tabBtn-users" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
-            <i data-lucide="users" class="w-3.5 h-3.5 text-sky-400 shrink-0"></i>
-            <span>Xodimlar</span>
+          <button onclick="switchTab('users')" id="tabBtn-users" title="Xodimlar" class="nav-tab p-2 rounded-xl text-slate-400 hover:text-sky-400 hover:bg-slate-800/60 transition flex items-center justify-center">
+            <i data-lucide="users" class="w-4 h-4 text-sky-400"></i>
           </button>
-          <button onclick="switchTab('history')" id="tabBtn-history" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
-            <i data-lucide="clipboard-list" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
-            <span>Jurnal</span>
+          <button onclick="switchTab('history')" id="tabBtn-history" title="Audit Jurnali (Tarix)" class="nav-tab p-2 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-slate-800/60 transition flex items-center justify-center">
+            <i data-lucide="clipboard-list" class="w-4 h-4 text-amber-400"></i>
           </button>
-          <button onclick="switchTab('settings')" id="tabBtn-settings" class="nav-tab px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap">
-            <i data-lucide="bot" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
-            <span>Sozlamalar</span>
+          <button onclick="switchTab('settings')" id="tabBtn-settings" title="Bot & Sozlamalar" class="nav-tab p-2 rounded-xl text-slate-400 hover:text-purple-400 hover:bg-slate-800/60 transition flex items-center justify-center">
+            <i data-lucide="bot" class="w-4 h-4 text-purple-400"></i>
           </button>
         </nav>
 
@@ -265,42 +248,6 @@
             <i data-lucide="log-out" class="w-4 h-4"></i>
           </button>
         </div>
-      </div>
-
-      <!-- Planshet va Noutbuklar uchun Ixcham Icon-Nav Bar (Mobilda butunlay yashiringan: 'hidden md:flex xl:hidden') -->
-      <div id="subNavBar" class="hidden md:flex xl:hidden items-center justify-center overflow-x-auto no-scrollbar px-3 sm:px-6 py-2 border-t border-slate-800/80 gap-1.5 sm:gap-2 bg-slate-900/95 sticky top-16 z-20 backdrop-blur">
-        <button onclick="switchTab('dashboard')" id="subTabBtn-dashboard" title="Dashboard" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-bold text-white bg-wb-600 shadow-md transition flex items-center gap-1.5 whitespace-nowrap shrink-0">
-          <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i>
-          <span class="hidden lg:inline">Dashboard</span>
-        </button>
-        <button onclick="switchTab('inbound')" id="subTabBtn-inbound" title="Kirim Bo'limi" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
-          <i data-lucide="arrow-down-left" class="w-4 h-4 text-emerald-400 shrink-0"></i>
-          <span class="hidden lg:inline">Kirim</span>
-        </button>
-        <button onclick="switchTab('outbound')" id="subTabBtn-outbound" title="Chiqim Bo'limi" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
-          <i data-lucide="arrow-up-right" class="w-4 h-4 text-rose-400 shrink-0"></i>
-          <span class="hidden lg:inline">Chiqim</span>
-        </button>
-        <button onclick="switchTab('products')" id="subTabBtn-products" title="Katalog & QR" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
-          <i data-lucide="boxes" class="w-4 h-4 text-indigo-400 shrink-0"></i>
-          <span class="hidden lg:inline">Katalog & QR</span>
-        </button>
-        <button onclick="switchTab('categories')" id="subTabBtn-categories" title="Kategoriyalar" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
-          <i data-lucide="tags" class="w-4 h-4 text-fuchsia-400 shrink-0"></i>
-          <span class="hidden lg:inline">Kategoriyalar</span>
-        </button>
-        <button onclick="switchTab('users')" id="subTabBtn-users" title="Xodimlar" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
-          <i data-lucide="users" class="w-4 h-4 text-sky-400 shrink-0"></i>
-          <span class="hidden lg:inline">Xodimlar</span>
-        </button>
-        <button onclick="switchTab('history')" id="subTabBtn-history" title="Audit Jurnali" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
-          <i data-lucide="clipboard-list" class="w-4 h-4 text-amber-400 shrink-0"></i>
-          <span class="hidden lg:inline">Audit Jurnali</span>
-        </button>
-        <button onclick="switchTab('settings')" id="subTabBtn-settings" title="Bot & Sozlamalar" class="subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60">
-          <i data-lucide="bot" class="w-4 h-4 text-cyan-400 shrink-0"></i>
-          <span class="hidden lg:inline">Bot & Sozlamalar</span>
-        </button>
       </div>
     </header>
 
@@ -2094,36 +2041,13 @@
       currentActiveTab = tabName;
       const meta = TAB_METADATA[tabName] || TAB_METADATA['dashboard'];
 
-      // 0. Yuqori Navbarda Hozirgi Bo'lim Ko'rsatkichi (Active Section Badge)
-      const secBadge = document.getElementById('activeSectionBadge');
-      const secName = document.getElementById('activeSectionName');
-      const secDot = document.getElementById('activeSectionDot');
-      if (secBadge && secName && secDot) {
-        secName.textContent = meta.name;
-        secDot.style.backgroundColor = meta.color;
-        secDot.style.boxShadow = `0 0 10px ${meta.color}`;
-        secBadge.className = `flex items-center gap-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border transition-all duration-300 shadow-sm shrink-0 ${meta.activePill}`;
-      }
-
-      // 1. Desktop Tabs (>= xl)
+      // 1. Desktop & Tablet Header Navigation (Ixcham Ikonkalar)
       document.querySelectorAll('.nav-tab').forEach(el => {
-        el.className = "nav-tab px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition flex items-center gap-1.5 whitespace-nowrap";
+        el.className = "nav-tab p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition flex items-center justify-center";
       });
       const btn = document.getElementById(`tabBtn-${tabName}`);
       if (btn) {
-        btn.className = `nav-tab px-3 py-1.5 rounded-xl text-xs font-bold text-white ${meta.tailwindBg} shadow-lg border border-white/20 transition flex items-center gap-1.5 whitespace-nowrap scale-105`;
-      }
-
-      // 2. Subnav Tabs (Noutbuk & Planshetlar uchun ixcham icon-nav)
-      document.querySelectorAll('.subnav-tab').forEach(el => {
-        el.className = "subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 bg-slate-800/60";
-      });
-      const subBtn = document.getElementById(`subTabBtn-${tabName}`);
-      if (subBtn) {
-        subBtn.className = `subnav-tab p-2 lg:px-3 lg:py-1.5 rounded-xl text-xs font-bold text-white ${meta.tailwindBg} shadow-lg border border-white/20 transition flex items-center gap-1.5 whitespace-nowrap shrink-0 scale-105`;
-        try {
-          subBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-        } catch (e) {}
+        btn.className = `nav-tab p-2 rounded-xl text-white ${meta.tailwindBg} shadow-md border border-white/20 transition flex items-center justify-center scale-110`;
       }
 
       // 3. Mobile Floating Bottom Nav (< md)
